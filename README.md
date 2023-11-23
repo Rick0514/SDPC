@@ -131,7 +131,11 @@ Code references to [1-5] and adapts from [2-3]. Thanks to the open source.
 ## Ref
 
 [1] https://github.com/lmark1/velodyne_simulator
+
 [2] https://github.com/lvfengchi/livox_laser_simulation
+
 [3] https://github.com/rpng/lips
+
 [4] https://github.com/gazebosim/gazebo-classic
+
 [5] https://github.com/ttk592/spline
