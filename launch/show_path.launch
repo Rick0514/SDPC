@@ -1,0 +1,11 @@
+<launch>
+
+    <node name="show_path" pkg="sdpc" type="show_path" output="screen">
+        <param name="total_time" value="10" />
+        <param name="dt" value="0.1" />
+        <param name="path_fn" value="$(find sdpc)/path_dir/path_test.txt" />
+    </node>
+
+    <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find sdpc)/rviz/show_path.rviz" />
+
+</launch>

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+
+<robot name="robot" xmlns:xacro="http://ros.org/wiki/xacro">
+  
+	<xacro:property name="M_PI" value="3.14159265358979"/>
+
+	<link name="base_link"/>
+
+    <joint name="livox_base_joint" type="fixed">
+        <parent link="base_link"/>
+        <child link="livox_base"/>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+    </joint>
+
+    <!-- velodyne and its parameters-->
+    <xacro:include filename="$(find sdpc)/urdf/lidar.xacro"/>
+	<xacro:Lidar/>
+	
+</robot>

@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+	
+    <xacro:property name="M_PI" value="3.1415926"/> 
+
+    <xacro:macro name="null_inertial">
+        <inertial>
+        <mass value="0.1"/>
+        <inertia ixx="0.001" ixy="0" ixz="0"
+            iyy="0.001" iyz="0"
+            izz="0.001"/>
+        </inertial>
+    </xacro:macro>
+
+    <xacro:macro name="Lidar" params="name:=livox">
+        <link name="${name}_base">
+            <xacro:null_inertial/>
+            <visual> 
+            <origin xyz="0.00 0 0.00" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://sdpc/urdf/livox_mid40.dae">
+                </mesh>
+            </geometry>
+            </visual>
+
+            <collision>
+                <origin xyz="0 0 0" rpy="0 0 0" />
+                <geometry>
+                <mesh filename="package://sdpc/urdf/livox_mid40.dae">
+                </mesh>
+                </geometry>
+            </collision>
+        </link>
+
+        <link name="${name}"/>
+        <joint name="${name}_to_${name}_base_joint" type="fixed">
+            <parent link="${name}_base"/>
+            <child link="${name}"/>
+            <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+        </joint>
+
+        <gazebo reference="${name}">
+            <sensor type="ray" name="livox_lidar">
+                <pose>0 0 0 0 0 0</pose>
+                <visualize>false</visualize>
+                <plugin name="dpc_lidar" filename="libsdpc.so">
+                    <ray>
+                        <scan>
+                            <horizontal>
+                                <samples>1800</samples>
+                                <resolution>1</resolution>
+                                <min_angle>0</min_angle>
+                                <max_angle>360</max_angle>
+                            </horizontal>
+                            <vertical>
+                                <samples>16</samples>
+                                <resolution>1</resolution>
+                                <min_angle>-15</min_angle>
+                                <max_angle>15</max_angle>
+                            </vertical>
+                        </scan>
+                        <range>
+                            <min>0.2</min>
+                            <max>100</max>
+                            <resolution>1</resolution>
+                        </range>
+                        <noise>
+                            <type>gaussian</type>
+                            <mean>0</mean>
+                            <stddev>1e-6</stddev>
+                        </noise>
+                    </ray>
+                    <visualize>false</visualize>
+                    <hz>10</hz>
+                </plugin>
+            </sensor>
+        </gazebo>
+
+    </xacro:macro>
+</robot>

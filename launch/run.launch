@@ -1,0 +1,30 @@
+<launch>
+
+    <arg name="world_name" value="trees" />
+    <param name="total_time" type="double" value="10.0" />
+    <param name="path_fn" type="string" value="$(find sdpc)/path_dir/path_test.txt" />
+    <param name="save_bag" type="string" value="$(find sdpc)/bag/dist.bag" />    
+    <param name="lidar_topic" type="string" value="lidar_points" />
+    <param name="lidar_type" type="string" value="velodyne" />
+    <param name="save_pcd" type="bool" value="true"/>
+    <param name="pcd_dir" type="string" value="$(find sdpc)/pcd/"/>
+
+    <param name="robot_description" command="$(find xacro)/xacro '$(find sdpc)/urdf/robot.xacro'" />
+
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
+        <param name="publish_frequency" type="double" value="50.0" />
+    </node>
+
+    <node pkg="gazebo_ros" type="spawn_model" name="model" args="-urdf -model robot -param robot_description" />
+
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(find sdpc)/worlds/$(arg world_name)" />
+        <arg name="paused" value="false" />
+        <arg name="use_sim_time" value="true"/>
+        <arg name="gui" value="false" />
+        <arg name="headless" value="false" />`
+        <arg name="debug" value="false" />
+        <arg name="verbose" value="true" />
+    </include>
+
+</launch>
