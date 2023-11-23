@@ -115,6 +115,12 @@ Then you can run:
 roslaunch sdpc run.launch
 ```
 
+## Perf.
+
+Compared to Lips[3], as far as i know has same function as SDPC, it acquires one frame
+velodye 16*1800 pointclouds cost 12s with 10 planes. But SDPC does not limit to plane
+scenarios, and 10x times faster!!
+
 ## Ack.
 
 Code references to [1-5] and adapts from [2-3]. Thanks to the open source.
