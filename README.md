@@ -81,7 +81,10 @@ For now only support velodyne
         <ray>
             <scan>
                 <horizontal>
+                    <!-- when use velodyne -->
                     <samples>1800</samples>
+                    <!-- when use avia -->
+                    <!-- <samples>24000</samples> -->
                     <resolution>1</resolution>
                     <min_angle>0</min_angle>
                     <max_angle>360</max_angle>
@@ -106,6 +109,7 @@ For now only support velodyne
         </ray>
         <visualize>false</visualize>
         <hz>10</hz>
+        <downsample>1</downsample>
     </plugin>
 
 ```
@@ -128,7 +132,13 @@ Code references to [1-5] and adapts from [2-3]. Thanks to the open source.
 
 ## TODO
 
-- [ ] Livox support
+- [x] Livox support
+
+Avia mapping:
+
+![image](doc/avia_mapping.png)
+
+
 - [ ] IMU support
 - [ ] FastLIO/PointLIO demo
 - [ ] GPU support, long way to go!

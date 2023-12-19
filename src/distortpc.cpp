@@ -12,7 +12,12 @@ using std::endl;
 
 GZ_REGISTER_SENSOR_PLUGIN(DistortPC)
 
-DistortPC::DistortPC(){}
+pcl::VoxelGrid<pcl::PointXYZ>::Ptr vgptr;
+
+DistortPC::DistortPC(){
+    vgptr = pcl::make_shared<pcl::VoxelGrid<pcl::PointXYZ>>();
+    vgptr->setLeafSize(0.3, 0.3, 0.3);
+}
 
 DistortPC::~DistortPC()
 {
@@ -33,6 +38,9 @@ void DistortPC::Load(sensors::SensorPtr _parent, sdf::ElementPtr sdf)
     rn->getParam("lidar_type", lidar_type);
     rn->getParam("save_pcd", save_pcd);
     rn->getParam("pcd_dir", pcd_dir);
+
+    string scan_dir;
+    rn->getParam("scan_dir", scan_dir);
     gzmsg << "path_fn: " << path_fn << endl;
     gzmsg << "save_pcd: " << save_pcd << endl;
     gzmsg << "pcd_dir: " << pcd_dir << endl;
@@ -42,6 +50,8 @@ void DistortPC::Load(sensors::SensorPtr _parent, sdf::ElementPtr sdf)
 
     if(lidar_type == "velodyne"){
         lidar = new lidartype::Velodyne(sdf);
+    }else if(lidar_type == "avia"){
+        lidar = new lidartype::Avia(sdf, scan_dir);
     }else{
         gzerr << "No [" << lidar_type << "] such lidar type!!" << endl;
         throw std::invalid_argument("");
@@ -118,7 +128,7 @@ void DistortPC::DistortPCHandler()
 
                     // save undist pc
                     if(save_pcd){
-                        auto d_pt =  dist_lidarInG.Rot() * lidarInG.Rot().Inverse() * pt + dist_lidarInG.Pos();
+                        auto d_pt = dist_lidarInG.Rot() * lidarInG.Rot().Inverse() * pt + dist_lidarInG.Pos();
                         auto ud_pt = pt + lidarInG.Pos();
                         pcl::PointXYZ dp, udp;
                         dp.x = d_pt.X();
@@ -129,6 +139,17 @@ void DistortPC::DistortPCHandler()
                         udp.z = ud_pt.Z();
                         dist_pc->push_back(dp);
                         undist_pc->push_back(udp);
+
+                        if(dist_pc->size() > 5e6){
+                            vgptr->setInputCloud(dist_pc);
+                            vgptr->filter(*dist_pc);
+
+                            vgptr->setInputCloud(undist_pc);
+                            vgptr->filter(*undist_pc);
+
+                            gzmsg << "after dist size: " << dist_pc->size() << endl;
+                            gzmsg << "after undist size: " << undist_pc->size() << endl;
+                        }
                     }
                 }
             }
@@ -150,16 +171,13 @@ void DistortPC::DistortPCHandler()
         gzmsg << "saving pcd..." << endl;
         gzmsg << "dist_pc size: " << dist_pc->size() << endl;
         gzmsg << "undist_pc size: " << undist_pc->size() << endl;
-
-        pcl::VoxelGrid<pcl::PointXYZ> vg1, vg2;
-        vg1.setLeafSize(0.3, 0.3, 0.3);
-        vg1.setInputCloud(dist_pc);
-        vg1.filter(*dist_pc);
+        
+        vgptr->setInputCloud(dist_pc);
+        vgptr->filter(*dist_pc);
         pcl::io::savePCDFileBinary(pcd_dir + "dist_pc.pcd", *dist_pc);
 
-        vg2.setLeafSize(0.3, 0.3, 0.3);
-        vg2.setInputCloud(undist_pc);
-        vg2.filter(*undist_pc);
+        vgptr->setInputCloud(undist_pc);
+        vgptr->filter(*undist_pc);
         pcl::io::savePCDFileBinary(pcd_dir + "undist_pc.pcd", *undist_pc);
     }
 

@@ -47,7 +47,8 @@
                     <ray>
                         <scan>
                             <horizontal>
-                                <samples>1800</samples>
+                                <!-- <samples>1800</samples> -->
+                                <samples>24000</samples>
                                 <resolution>1</resolution>
                                 <min_angle>0</min_angle>
                                 <max_angle>360</max_angle>
@@ -72,6 +73,7 @@
                     </ray>
                     <visualize>false</visualize>
                     <hz>10</hz>
+                    <downsample>1</downsample>
                 </plugin>
             </sensor>
         </gazebo>
