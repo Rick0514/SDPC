@@ -135,8 +135,7 @@ roslaunch sdpc vis_bag.launch
 ```
 
 <center class="half">
-    <img src="doc/dis_velo.png" width="350"/>
-    <img src="doc/dis_avia.png" width="350"/>
+    <img src="doc/dis_velo.png" width="350"/><img src="doc/dis_avia.png" width="350"/>
 </center>
 
 
