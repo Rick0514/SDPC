@@ -7,6 +7,7 @@ Panels:
         - /Global Options1
         - /Status1
         - /Path1
+        - /Axes1
       Splitter Ratio: 0.5
     Tree Height: 728
   - Class: rviz/Selection
@@ -76,6 +77,13 @@ Visualization Manager:
       Topic: /path
       Unreliable: false
       Value: true
+    - Class: rviz/Axes
+      Enabled: true
+      Length: 0.699999988079071
+      Name: Axes
+      Radius: 0.10000000149011612
+      Reference Frame: <Fixed Frame>
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -104,25 +112,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 9.034517288208008
+      Distance: 4.742042541503906
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.17114606499671936
-        Y: 1.189652919769287
-        Z: 1.1114399433135986
+        X: 0.603839099407196
+        Y: 1.3873422145843506
+        Z: 0.48496213555336
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7253979444503784
+      Pitch: 0.5297971367835999
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.378583908081055
+      Yaw: 4.618574142456055
     Saved: ~
 Window Geometry:
   Displays:

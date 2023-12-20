@@ -14,7 +14,7 @@
     <param name="imu_topic" type="string" value="/imu/data" />
 
     <param name="path_fn" type="string" value="$(find sdpc)/path_dir/path_test.txt" />
-    <param name="save_bag" type="string" value="$(find sdpc)/bag/velo.bag" />    
+    <param name="save_bag" type="string" value="$(find sdpc)/bag/avia.bag" />    
     <param name="pcd_dir" type="string" value="$(find sdpc)/pcd/"/>
     <param name="scan_dir" type="string" value="$(find sdpc)/doc/scan_mode/"/>
     

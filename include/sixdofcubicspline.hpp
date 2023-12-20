@@ -23,13 +23,17 @@ private:
     double total_time;
     vector<tk::spline> sps; // xyz, rpy
 
+    double still_time;
+    ignition::math::Pose3d still_pose;
+
 public:
 
     static vector<vector<double>> parsePath(string fn)
     {
         string tmp;    
         std::ifstream inf(fn);
-        // first line
+        // jump first two lines
+        getline(inf, tmp);
         getline(inf, tmp);
 
         vector<vector<double>> data;
@@ -72,6 +76,11 @@ public:
         double time_scale = *std::max_element(t.begin(), t.end());
         for(auto& e : t)   e = (e / time_scale) * total_time;
 
+        still_time = t[1];
+        still_pose.Set(data[0][1], data[0][2], data[0][3], data[0][4], data[0][5], data[0][6]);
+        t.erase(t.begin());
+        data.erase(data.begin());
+
         // init sps
         for(int i=1; i<=6; i++){
             tk::spline sp;
@@ -87,11 +96,13 @@ public:
             }
             sp.set_points(t, d);
             sps.push_back(sp);
-        }        
+        }
     }
 
     ignition::math::Pose3d getPose(double t)
     {
+        if(t < still_time)  return still_pose;
+
         vector<double> d(6);
         for(int i=0; i<6; i++){
             d[i] = sps[i](t);
@@ -102,6 +113,8 @@ public:
 
     IV3d getV(double t)
     {
+        if(t < still_time)  return IV3d::Zero;
+
         vector<double> v(3);
         for(int i=0; i<3; i++){
             v[i] = sps[i].deriv(1, t);
@@ -111,6 +124,8 @@ public:
 
     IV3d getA(double t)
     {
+        if(t < still_time)  return IV3d::Zero;
+
         vector<double> v(3);
         for(int i=0; i<3; i++){
             v[i] = sps[i].deriv(2, t);
@@ -120,6 +135,8 @@ public:
 
     IV3d getOmega(double t)
     {
+        if(t < still_time)  return IV3d::Zero;
+
         auto pose = getPose(t);
 
         double roll = pose.Rot().Roll();
@@ -138,7 +155,7 @@ public:
         
         IV3d om_inG = J * IV3d(dr, dp, dy);
         return om_inG;
-        
+
     }
 };
 
