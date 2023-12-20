@@ -49,7 +49,7 @@ private:
     double total_time;
     string path_fn;
     string save_bag;
-    string lidar_topic;
+    string lidar_topic, imu_topic;
     string lidar_type;
     bool save_pcd;
     string pcd_dir;
@@ -57,12 +57,25 @@ private:
     pcl::PointCloud<pcl::PointXYZ>::Ptr dist_pc;
     pcl::PointCloud<pcl::PointXYZ>::Ptr undist_pc;
 
+    IV3d grav;
+    IV3d tLI;
+    IQd rLI;
+    int imu_hz;
+
+    static constexpr double min_start_time = 1e-3;
+
+    // imu
+    double imu_bg, imu_ba;
+    double imu_ng, imu_na;
+
 public:
     DistortPC();
     ~DistortPC();
 
     void Load(sensors::SensorPtr _parent, sdf::ElementPtr sdf);
     void DistortPCHandler();
+
+    void saveIMU();
 };
 
 };

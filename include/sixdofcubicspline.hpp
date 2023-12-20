@@ -17,6 +17,12 @@ class SixDofCubicSpline
 private:
     static constexpr double Deg2Rad = M_PI / 180.0;
 
+    using IV3d = ignition::math::Vector3d;
+    using IQd = ignition::math::Quaterniond;
+
+    double total_time;
+    vector<tk::spline> sps; // xyz, rpy
+
 public:
 
     static vector<vector<double>> parsePath(string fn)
@@ -94,9 +100,45 @@ public:
         return p;
     }
 
-private:
+    IV3d getV(double t)
+    {
+        vector<double> v(3);
+        for(int i=0; i<3; i++){
+            v[i] = sps[i].deriv(1, t);
+        }
+        return IV3d(v[0], v[1], v[2]);
+    }
 
-    double total_time;
-    vector<tk::spline> sps;
+    IV3d getA(double t)
+    {
+        vector<double> v(3);
+        for(int i=0; i<3; i++){
+            v[i] = sps[i].deriv(2, t);
+        }
+        return IV3d(v[0], v[1], v[2]);
+    }
+
+    IV3d getOmega(double t)
+    {
+        auto pose = getPose(t);
+
+        double roll = pose.Rot().Roll();
+        double pitch = pose.Rot().Pitch();
+        double yaw = pose.Rot().Yaw();
+
+        double dr = sps[3].deriv(1, t);
+        double dp = sps[4].deriv(1, t);
+        double dy = sps[5].deriv(1, t);
+
+        // dot(w) = J * dot(rpy)
+        ignition::math::Matrix3d J(cos(yaw)*cos(pitch), -sin(yaw), 0,
+            sin(yaw)*cos(pitch), cos(yaw), 0,
+            -sin(pitch), 0, 1
+        );
+        
+        IV3d om_inG = J * IV3d(dr, dp, dy);
+        return om_inG;
+        
+    }
 };
 

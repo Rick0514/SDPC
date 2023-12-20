@@ -6,6 +6,9 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
 
+#include <sensor_msgs/Imu.h>
+#include <nav_msgs/Odometry.h>
+
 namespace gazebo
 {
 using std::endl;
@@ -13,6 +16,9 @@ using std::endl;
 GZ_REGISTER_SENSOR_PLUGIN(DistortPC)
 
 pcl::VoxelGrid<pcl::PointXYZ>::Ptr vgptr;
+std::random_device rd;
+std::mt19937 gen(rd());
+std::normal_distribution<double> normal_dis(0, 1);
 
 DistortPC::DistortPC(){
     vgptr = pcl::make_shared<pcl::VoxelGrid<pcl::PointXYZ>>();
@@ -26,21 +32,48 @@ DistortPC::~DistortPC()
     laserShape.reset();
 }
 
+template <typename T>
+void setIVd(IV3d& iv, const vector<T>& v){
+    iv.X() = v[0];
+    iv.Y() = v[1];
+    iv.Z() = v[2];
+}
+
 void DistortPC::Load(sensors::SensorPtr _parent, sdf::ElementPtr sdf)
 {
     gzmsg << "Load distort lidar plugin now!!" << endl;
     rn = boost::make_shared<ros::NodeHandle>();
 
     rn->getParam("total_time", total_time);
+    rn->getParam("imu_hz", imu_hz);
     rn->getParam("path_fn", path_fn);
     rn->getParam("lidar_topic", lidar_topic);
     rn->getParam("save_bag", save_bag);
     rn->getParam("lidar_type", lidar_type);
     rn->getParam("save_pcd", save_pcd);
     rn->getParam("pcd_dir", pcd_dir);
+    
+    // imu
+    rn->getParam("imu_topic", imu_topic);
+    rn->getParam("imu_bg", imu_bg);
+    rn->getParam("imu_ba", imu_ba);
+    rn->getParam("imu_ng", imu_ng);
+    rn->getParam("imu_na", imu_na);
 
     string scan_dir;
     rn->getParam("scan_dir", scan_dir);
+
+    vector<float> v_tLI, v_rLI, v_g;
+    IV3d tmp;
+    rn->getParam("grav", v_g);
+    rn->getParam("t_LI", v_tLI);
+    rn->getParam("r_LI", v_rLI);
+    // init ext and grav
+    setIVd(tLI, v_tLI);
+    setIVd(tmp, v_rLI);
+    setIVd(grav, v_g);
+    rLI.Euler(tmp);
+    
     gzmsg << "path_fn: " << path_fn << endl;
     gzmsg << "save_pcd: " << save_pcd << endl;
     gzmsg << "pcd_dir: " << pcd_dir << endl;
@@ -66,6 +99,9 @@ void DistortPC::Load(sensors::SensorPtr _parent, sdf::ElementPtr sdf)
     world = physics::get_world(parentSensor->WorldName());
     parentEntity = world->EntityByName(parentSensor->ParentName());
 
+    // save imu first
+    saveIMU();
+
     // init engine
     auto physics = world->Physics();
     laserCollision = physics->CreateCollision("ray", parentSensor->ParentName());
@@ -84,12 +120,71 @@ void DistortPC::Load(sensors::SensorPtr _parent, sdf::ElementPtr sdf)
 
 }
 
+// save real pose, v, a, w
+void DistortPC::saveIMU()
+{
+    double start_time = min_start_time;
+    double dt = 1.0 / imu_hz;
+    double cof = 1.0 / std::sqrt(dt);
+
+    nav_msgs::Odometry gt_pose;
+    sensor_msgs::Imu imu;
+    imu.header.frame_id = "imu";
+    gt_pose.header.frame_id = "map";
+    gt_pose.child_frame_id = "gt";
+
+    while(start_time < total_time)
+    {
+        auto imuInG = sixsp->getPose(start_time);
+        auto vel = sixsp->getV(start_time);
+        auto acc = sixsp->getA(start_time) + grav;
+        auto g_inImu = imuInG.Rot().Inverse();
+        acc = g_inImu * acc;
+        auto omg = g_inImu * sixsp->getOmega(start_time);
+        
+        gt_pose.header.stamp.fromSec(start_time);
+        gt_pose.pose.pose.position.x = imuInG.Pos().X();
+        gt_pose.pose.pose.position.y = imuInG.Pos().Y();
+        gt_pose.pose.pose.position.z = imuInG.Pos().Z();
+        gt_pose.pose.pose.orientation.x = imuInG.Rot().X();
+        gt_pose.pose.pose.orientation.y = imuInG.Rot().Y();
+        gt_pose.pose.pose.orientation.z = imuInG.Rot().Z();
+        gt_pose.pose.pose.orientation.w = imuInG.Rot().W();
+        gt_pose.twist.twist.linear.x = vel.X();
+        gt_pose.twist.twist.linear.y = vel.Y();
+        gt_pose.twist.twist.linear.z = vel.Z();
+        gt_pose.twist.twist.angular.x = omg.X();
+        gt_pose.twist.twist.angular.y = omg.Y();
+        gt_pose.twist.twist.angular.z = omg.Z();
+        
+        // add noise
+        imu.angular_velocity.x = omg.X() + imu_bg + imu_ng * cof * normal_dis(gen);
+        imu.angular_velocity.y = omg.Y() + imu_bg + imu_ng * cof * normal_dis(gen);
+        imu.angular_velocity.z = omg.Z() + imu_bg + imu_ng * cof * normal_dis(gen);
+        imu.linear_acceleration.x = acc.X() + imu_ba + imu_na * cof * normal_dis(gen);
+        imu.linear_acceleration.y = acc.Y() + imu_ba + imu_na * cof * normal_dis(gen);
+        imu.linear_acceleration.z = acc.Z() + imu_ba + imu_na * cof * normal_dis(gen);
+
+        imu.header.stamp.fromSec(start_time);
+        rbag.write(imu_topic, imu.header.stamp, imu);
+        rbag.write("gt_pose", gt_pose.header.stamp, gt_pose);
+        start_time += dt;
+    }    
+
+    gzmsg << "imu and gt are saved!!" << endl;
+}
+
 void DistortPC::DistortPCHandler()
 {
-    static double start_time = 1e-3;
-
+    static double start_time = min_start_time;
+    
     double dist;
     string entity;
+
+    ignition::math::Pose3d lidarInImu(tLI, rLI);
+    nav_msgs::Odometry lidar_pose;
+    lidar_pose.header.frame_id = "map";
+    lidar_pose.child_frame_id = "gt_lidar";
 
     while(start_time < total_time){
 
@@ -98,11 +193,12 @@ void DistortPC::DistortPCHandler()
         hits.reserve(frame.size());
 
         auto tic = std::chrono::high_resolution_clock::now();
+        
+        auto dist_lidarInG = sixsp->getPose(start_time) * lidarInImu;
 
         for(const auto& f : frame){
 
-            auto dist_lidarInG = sixsp->getPose(start_time);
-            auto lidarInG = sixsp->getPose(f.timestamp);
+            auto lidarInG = sixsp->getPose(f.timestamp) * lidarInImu;
             
             lidartype::ig_pc tmp_pc;
             tmp_pc.timestamp = f.timestamp;
@@ -155,6 +251,16 @@ void DistortPC::DistortPCHandler()
             }
             if(tmp_pc.pc.size())    hits.push_back(tmp_pc);
         }
+
+        lidar_pose.header.stamp.fromSec(start_time);
+        lidar_pose.pose.pose.position.x = dist_lidarInG.Pos().X();
+        lidar_pose.pose.pose.position.y = dist_lidarInG.Pos().Y();
+        lidar_pose.pose.pose.position.z = dist_lidarInG.Pos().Z();
+        lidar_pose.pose.pose.orientation.x = dist_lidarInG.Rot().X();
+        lidar_pose.pose.pose.orientation.y = dist_lidarInG.Rot().Y();
+        lidar_pose.pose.pose.orientation.z = dist_lidarInG.Rot().Z();
+        lidar_pose.pose.pose.orientation.w = dist_lidarInG.Rot().W();
+        rbag.write("lidar_pose", lidar_pose.header.stamp, lidar_pose);
 
         lidar->writeToBag(rbag, hits, lidar_topic);
 
