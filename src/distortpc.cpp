@@ -212,20 +212,18 @@ void DistortPC::DistortPCHandler()
                 laserShape->SetPoints(lidarInG.Pos(), new_ray);
                 laserShape->GetIntersection(dist, entity);
 
-                if(entity.size()){
+                double ra = dist / lidar->getMaxRange();
+
+                if(entity.size() && ra <= 1.0){
                     tmp_pc.ring.push_back(f.ring[i]);
 
-                    lidartype::point_t pt;
-                    auto pdir = dist * laserShape->getDir();
-                    pt.X() = pdir.X();
-                    pt.Y() = pdir.Y();
-                    pt.Z() = pdir.Z();
+                    lidartype::point_t pt = ra * p;
                     tmp_pc.pc.push_back(pt);
 
                     // save undist pc
                     if(save_pcd){
-                        auto d_pt = dist_lidarInG.Rot() * lidarInG.Rot().Inverse() * pt + dist_lidarInG.Pos();
-                        auto ud_pt = pt + lidarInG.Pos();
+                        auto d_pt = dist_lidarInG.Rot() * pt + dist_lidarInG.Pos();
+                        auto ud_pt = lidarInG.Rot() * pt + lidarInG.Pos();
                         pcl::PointXYZ dp, udp;
                         dp.x = d_pt.X();
                         dp.y = d_pt.Y();

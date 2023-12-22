@@ -109,6 +109,7 @@ public:
     }
 
     int getHz() const { return hz;  }
+    double getMaxRange() const { return max_range; }
 
     virtual v_time_pc getFrame(double start_time) = 0;
     virtual void writeToBag(rosbag::Bag& bag, const v_time_pc& vp, const std::string& topic) {}

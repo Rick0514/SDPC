@@ -1,9 +1,9 @@
 <launch>
 
     <arg name="world_name" value="trees" />
-    <param name="total_time" type="double" value="10.0" />
+    <param name="total_time" type="double" value="5.0" />
     <param name="imu_hz" type="int" value="100" />
-    <param name="save_pcd" type="bool" value="false"/>
+    <param name="save_pcd" type="bool" value="true"/>
 
     <param name="lidar_type" type="string" value="avia" />
     <param name="lidar_topic" type="string" value="/livox/lidar" />
@@ -13,7 +13,7 @@
     
     <param name="imu_topic" type="string" value="/imu/data" />
 
-    <param name="path_fn" type="string" value="$(find sdpc)/path_dir/path_test.txt" />
+    <param name="path_fn" type="string" value="$(find sdpc)/path_dir/path1.txt" />
     <param name="save_bag" type="string" value="$(find sdpc)/bag/avia.bag" />    
     <param name="pcd_dir" type="string" value="$(find sdpc)/pcd/"/>
     <param name="scan_dir" type="string" value="$(find sdpc)/doc/scan_mode/"/>
