@@ -1,7 +1,10 @@
 <launch>
 
-    <arg name="world_name" value="trees" />
-    <param name="total_time" type="double" value="5.0" />
+    <arg name="world_name" value="twowalls" />
+    <arg name="bag_name" value="still" />
+    <arg name="path_name" value="path_still" />
+
+    <param name="total_time" type="double" value="8.0" />
     <param name="imu_hz" type="int" value="100" />
     <param name="save_pcd" type="bool" value="true"/>
 
@@ -13,8 +16,8 @@
     
     <param name="imu_topic" type="string" value="/imu/data" />
 
-    <param name="path_fn" type="string" value="$(find sdpc)/path_dir/path1.txt" />
-    <param name="save_bag" type="string" value="$(find sdpc)/bag/avia.bag" />    
+    <param name="path_fn" type="string" value="$(find sdpc)/path_dir/$(arg path_name).txt" />
+    <param name="save_bag" type="string" value="$(find sdpc)/bag/$(arg bag_name).bag" />    
     <param name="pcd_dir" type="string" value="$(find sdpc)/pcd/"/>
     <param name="scan_dir" type="string" value="$(find sdpc)/doc/scan_mode/"/>
     

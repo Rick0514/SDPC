@@ -16,9 +16,15 @@ using std::endl;
 GZ_REGISTER_SENSOR_PLUGIN(DistortPC)
 
 pcl::VoxelGrid<pcl::PointXYZ>::Ptr vgptr;
-std::random_device rd;
-std::mt19937 gen(rd());
-std::normal_distribution<double> normal_dis(0, 1);
+
+static double gaussianKernel(double mu, double sigma)
+{
+    // using Box-Muller transform to generate two independent standard normally distributed normal variables
+    // see wikipedia
+    double U = (double)rand() / (double)RAND_MAX; // normalized uniform random variable
+    double V = (double)rand() / (double)RAND_MAX; // normalized uniform random variable
+    return sigma * (sqrt(-2.0 * ::log(U)) * cos(2.0 * M_PI * V)) + mu;
+}
 
 DistortPC::DistortPC(){
     vgptr = pcl::make_shared<pcl::VoxelGrid<pcl::PointXYZ>>();
@@ -158,12 +164,12 @@ void DistortPC::saveIMU()
         gt_pose.twist.twist.angular.z = omg.Z();
         
         // add noise
-        imu.angular_velocity.x = omg.X() + imu_bg + imu_ng * cof * normal_dis(gen);
-        imu.angular_velocity.y = omg.Y() + imu_bg + imu_ng * cof * normal_dis(gen);
-        imu.angular_velocity.z = omg.Z() + imu_bg + imu_ng * cof * normal_dis(gen);
-        imu.linear_acceleration.x = acc.X() + imu_ba + imu_na * cof * normal_dis(gen);
-        imu.linear_acceleration.y = acc.Y() + imu_ba + imu_na * cof * normal_dis(gen);
-        imu.linear_acceleration.z = acc.Z() + imu_ba + imu_na * cof * normal_dis(gen);
+        imu.angular_velocity.x = omg.X() + imu_bg + imu_ng * cof * gaussianKernel(0.0, 1.0);
+        imu.angular_velocity.y = omg.Y() + imu_bg + imu_ng * cof * gaussianKernel(0.0, 1.0);
+        imu.angular_velocity.z = omg.Z() + imu_bg + imu_ng * cof * gaussianKernel(0.0, 1.0);
+        imu.linear_acceleration.x = acc.X() + imu_ba + imu_na * cof * gaussianKernel(0.0, 1.0);
+        imu.linear_acceleration.y = acc.Y() + imu_ba + imu_na * cof * gaussianKernel(0.0, 1.0);
+        imu.linear_acceleration.z = acc.Z() + imu_ba + imu_na * cof * gaussianKernel(0.0, 1.0);
 
         imu.header.stamp.fromSec(start_time);
         rbag.write(imu_topic, imu.header.stamp, imu);
@@ -212,6 +218,8 @@ void DistortPC::DistortPCHandler()
                 laserShape->SetPoints(lidarInG.Pos(), new_ray);
                 laserShape->GetIntersection(dist, entity);
 
+                // noise currupted
+                dist += gaussianKernel(0.0, lidar->getNoiseStd());
                 double ra = dist / lidar->getMaxRange();
 
                 if(entity.size() && ra <= 1.0){

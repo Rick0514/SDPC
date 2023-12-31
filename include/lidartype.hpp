@@ -48,16 +48,22 @@ protected:
     double max_range;
     double min_range;
 
+    double noise_std;
+
 public:
 
     LidarBase(sdf::ElementPtr sdf)
     {
         auto range_sdf = sdf->GetElement("ray")->GetElement("range");
+        auto noise_sdf = sdf->GetElement("ray")->GetElement("noise");
         min_range = range_sdf->Get<double>("min");
         max_range = range_sdf->Get<double>("max");
 
+        noise_std = noise_sdf->Get<double>("stddev");
+        gzmsg << "noise std: " << noise_std << std::endl;        
+
         hz = sdf->Get<int>("hz");
-        gzmsg << "hz: " << hz << std::endl;
+        gzmsg << "hz: " << hz << std::endl;        
     }
 
     static bool readCsvFile(std::string file_name, std::vector<std::vector<double>>& datas) {
@@ -109,6 +115,7 @@ public:
     }
 
     int getHz() const { return hz;  }
+    double getNoiseStd() const { return noise_std; }
     double getMaxRange() const { return max_range; }
 
     virtual v_time_pc getFrame(double start_time) = 0;

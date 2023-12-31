@@ -77,7 +77,7 @@ public:
         for(auto& e : t)   e = (e / time_scale) * total_time;
 
         still_time = t[1];
-        still_pose.Set(data[0][1], data[0][2], data[0][3], data[0][4], data[0][5], data[0][6]);
+        still_pose.Set(data[0][1], data[0][2], data[0][3], data[0][4] * Deg2Rad, data[0][5] * Deg2Rad, data[0][6] * Deg2Rad);
         t.erase(t.begin());
         data.erase(data.begin());
 

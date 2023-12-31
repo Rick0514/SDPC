@@ -68,7 +68,7 @@
                         <noise>
                             <type>gaussian</type>
                             <mean>0</mean>
-                            <stddev>1e-6</stddev>
+                            <stddev>1e-2</stddev>
                         </noise>
                     </ray>
                     <visualize>false</visualize>

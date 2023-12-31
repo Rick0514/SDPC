@@ -2,7 +2,7 @@
 
     <node name="vis_bag" pkg="sdpc" type="vis_bag" output="screen" >
         <param name="N_SCANS" value="6" />
-        <param name="bag_fn" value="$(find sdpc)/bag/avia.bag" />
+        <param name="bag_fn" value="$(find sdpc)/bag/still.bag" />
     </node>
 
     launch-prefix="gdb -ex run --args">
