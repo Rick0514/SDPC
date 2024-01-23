@@ -1,10 +1,10 @@
 <launch>
 
-    <arg name="world_name" value="twowalls" />
-    <arg name="bag_name" value="still" />
-    <arg name="path_name" value="path_still" />
+    <arg name="world_name" value="trees" />
+    <arg name="bag_name" value="avia" />
+    <arg name="path_name" value="path1" />
 
-    <param name="total_time" type="double" value="8.0" />
+    <param name="total_time" type="double" value="5.0" />
     <param name="imu_hz" type="int" value="100" />
     <param name="save_pcd" type="bool" value="true"/>
 
