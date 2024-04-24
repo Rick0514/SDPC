@@ -1,0 +1,37 @@
+
+world_fn: "shape"
+
+# velo/avia/mid360
+lidar_types: ["velo"]
+lidar_topics: []
+odom_topic: "/odom"
+
+# from base to liadr
+exts: []
+
+lidar_info:
+
+    hz: 10
+    range: [0.1, 200.0]
+    dist_noise: 0.01
+
+    velo:
+        ver_ang: []
+        ver_range: [-15, 15]
+        hor_range: [0, 360]
+        
+        ver_samples: 16
+        hor_samples: 1800
+
+    livox:
+
+        scan_dir: ""
+        samples: 24000
+
+total_time: 10.0
+
+out_bag: ""
+
+
+
+    

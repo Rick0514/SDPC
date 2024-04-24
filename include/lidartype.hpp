@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <sdf/sdf.hh>
+#include <yaml-cpp/yaml.h>
 
 #include <ignition/math.hh>
 
@@ -14,6 +15,7 @@
 
 #include <pcl_conversions/pcl_conversions.h>
 
+
 namespace lidartype
 {
 
@@ -23,6 +25,7 @@ using std::vector;
 using std::pair;
 using point_t = ignition::math::Vector3d;
 using IQd = ignition::math::Quaterniond;
+using v_time_pc = vector<ig_pc>; // vector of a bunch of points with same timestamp
 
 struct ig_pc
 {
@@ -38,19 +41,25 @@ struct LivoxRotateInfo {
     uint8_t line;
 };
 
-using v_time_pc = vector<ig_pc>; // vector of a bunch of points with same timestamp
-
 class LidarBase
 {
 protected:
     
-    int hz;
+    float hz;
     double max_range;
     double min_range;
 
     double noise_std;
 
 public:
+
+    LidarBase(YAML::Node& yml){
+        auto hz = yml["hz"].as<float>();
+        auto noise_std = yml["dist_noise"].as<double>();
+        auto rg = yml["range"].as<vector<float>>();
+        min_range = rg[0];
+        max_range = rg[1];
+    }
 
     LidarBase(sdf::ElementPtr sdf)
     {
@@ -114,7 +123,7 @@ public:
         }
     }
 
-    int getHz() const { return hz;  }
+    float getHz() const { return hz;  }
     double getNoiseStd() const { return noise_std; }
     double getMaxRange() const { return max_range; }
 
@@ -122,6 +131,15 @@ public:
     virtual void writeToBag(rosbag::Bag& bag, const v_time_pc& vp, const std::string& topic) {}
 
     std::string name;
+
+    static std::shared_ptr<LidarBase> create(string type, YAML::Node& yml)
+    {
+        if(type == "velo" || type == "velodyne"){
+            return std::make_shared<Velodyne>(yml);
+        }else if(type == "avia"){
+            return std::make_shared<Avia>(yml);
+        }
+    }
 };
 
 
@@ -135,6 +153,47 @@ private:
     v_time_pc end_points;
     
 public:
+
+    Velodyne(YAML::Node& yml) : LidarBase(yml)
+    {
+        this->name = "velo";
+        
+        auto yyml = yml[name];
+        auto ver_ = yyml["ver_range"].as<vector<double>>();
+        auto hor_ = yyml["hor_range"].as<vector<double>>();
+        ver_ang.first = ver_[0];
+        ver_ang.second = ver_[1];
+        hor_ang.first = hor_[0];
+        hor_ang.second = hor_[1];
+
+        ver_n = yyml["ver_sample"].as<int>();
+        hor_n = yyml["hor_sample"].as<int>();
+
+        ig_pc igpc;
+        igpc.pc.resize(hor_n * ver_n);
+        igpc.ring.resize(hor_n * ver_n);
+
+        vector<double> zen;
+        zen.resize(ver_n);
+        for(int i=0; i<ver_n; i++){
+            zen[i] = ver_ang.first + (ver_ang.second - ver_ang.first) * i / ver_n;
+            zen[i] *= Deg2Rad;
+        }
+
+        for(int i=0; i<hor_n; i++){
+            double deg = hor_ang.first + (hor_ang.second - hor_ang.first) * i / hor_n * Deg2Rad;
+            
+            IQd ray;
+            for(int j=0; j<ver_n; j++){
+                ray.Euler(point_t(0.0, zen[j], deg));
+                igpc.pc[i * ver_n + j] = ray * point_t(max_range, 0, 0);
+                igpc.ring[i * ver_n + j] = j;
+            }
+        }
+        
+        end_points.push_back(igpc);
+    }
+
     Velodyne(sdf::ElementPtr sdf) : LidarBase(sdf)
     {
         this->name = "velodyne";
@@ -219,14 +278,28 @@ class Avia : public LidarBase
 {
 
     int samples;
-    int downsample;
+    int downsample{1};
     std::vector<LivoxRotateInfo> aviainfos;
 
-    int start_idx;
+    int start_idx{0};
+    string scan_dir;
 
 public:
 
-    Avia(sdf::ElementPtr sdf, string scan_dir) : LidarBase(sdf), start_idx(0)
+    Avia(YAML::Node& yml) : LidarBase(yml)
+    {
+        this->name = "avia";
+
+        auto yyml = yml["livox"];
+        scan_dir = yml["scan_dir"].as<string>();
+        samples = yml["samples"].as<int>();
+
+        vector<vector<double>> datas;
+        readCsvFile(scan_dir + this->name + ".csv", datas);
+        convertDataToRotateInfo(datas, aviainfos);
+    }
+
+    Avia(sdf::ElementPtr sdf, string scan_dir_) : LidarBase(sdf), scan_dir(scan_dir_)
     {
         this->name = "avia";
 
@@ -239,7 +312,6 @@ public:
         vector<vector<double>> datas;
         readCsvFile(scan_dir + this->name + ".csv", datas);
         convertDataToRotateInfo(datas, aviainfos);
-
     }
 
     virtual v_time_pc getFrame(double start_time) override
