@@ -152,7 +152,7 @@ Code references to [1-5] and adapts from [2-3]. Thanks to the open source.
 
 ## TODO
 
-- [x] Livox support
+- [x] Livox support(Avia, Mid360)
 
 Avia mapping:
 
@@ -160,7 +160,7 @@ Avia mapping:
 
 
 - [x] IMU support
-- [ ] FastLIO/PointLIO demo
+- [x] FastLIO/PointLIO demo
 - [ ] GPU support, long way to go!
 
 

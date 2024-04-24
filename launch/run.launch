@@ -1,11 +1,13 @@
 <launch>
 
     <arg name="world_name" value="trees" />
-    <arg name="bag_name" value="avia" />
-    <arg name="path_name" value="path1" />
+    <!-- <arg name="world_name" value="onewall" /> -->
+    <arg name="bag_name" value="avia_fast1" />
+    <!-- <arg name="path_name" value="path_still" /> -->
+    <arg name="path_name" value="path_fast1" />
 
-    <param name="total_time" type="double" value="5.0" />
-    <param name="imu_hz" type="int" value="100" />
+    <param name="total_time" type="double" value="12.0" />
+    <param name="imu_hz" type="int" value="200" />
     <param name="save_pcd" type="bool" value="true"/>
 
     <param name="lidar_type" type="string" value="avia" />

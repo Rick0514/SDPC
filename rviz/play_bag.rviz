@@ -58,15 +58,15 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 1.3778873682022095
-        Min Value: -31.120033264160156
+        Max Value: 5.965056896209717
+        Min Value: 0.0003040935844182968
         Value: true
       Axis: Z
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 255; 255; 255
       Color Transformer: AxisColor
-      Decay Time: 10
+      Decay Time: 0
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
@@ -160,10 +160,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3603988289833069
+      Pitch: 0.5953986048698425
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.803579568862915
+      Yaw: 3.543583393096924
     Saved: ~
 Window Geometry:
   Displays:

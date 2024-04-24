@@ -192,11 +192,12 @@ public:
 
         pcl::VelodynePC vpc;
         vpc.reserve(ver_n * hor_n);
-        
+        double f_stp = vp.front().timestamp;
+
         for(const auto& ps : vp){
             for(int i=0; i<ps.pc.size(); i++){
                 pcl::VelodynePoint pt;
-                pt.time = ps.timestamp;
+                pt.time = ps.timestamp - f_stp;
                 pt.ring = ps.ring[i];
                 pt.intensity = 100.0;
                 pt.x = ps.pc[i].X();
@@ -208,7 +209,7 @@ public:
 
         sensor_msgs::PointCloud2 ros_pc;
         pcl::toROSMsg(vpc, ros_pc);
-        ros_pc.header.stamp = ros::Time().fromSec(vp.front().timestamp);
+        ros_pc.header.stamp = ros::Time().fromSec(f_stp);
         ros_pc.header.frame_id = name;
         rbag.write(topic, ros_pc.header.stamp, ros_pc);
     }
