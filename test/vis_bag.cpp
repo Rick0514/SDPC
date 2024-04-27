@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
+#include <ros/package.h>
 
 #include <thread>
 #include <chrono>
@@ -12,12 +13,15 @@
 #include <pcl/common/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <icecream.hpp>
+#include <yaml-cpp/yaml.h>
+
 using namespace std;
 
 typedef pcl::PointXYZINormal PointType;
 typedef pcl::PointCloud<PointType> PointCloudXYZI;
 
-int N_SCANS = 10;
+int N_SCANS = 6;
 float blind = 0.5f;
 
 PointCloudXYZI::Ptr livoxHandler(const livox_ros_driver::CustomMsg::ConstPtr &msg) {
@@ -53,10 +57,16 @@ int main(int argc, char *argv[])
 
     ros::NodeHandle rn("~");
 
+    // get rospkg dir
+    string pkg_dir = ros::package::getPath("sdpc");
+    auto yml = YAML::LoadFile(pkg_dir + "/config/mld.yaml");
+    
+
     string bag_fn;
-    rn.getParam("bag_fn", bag_fn);
-    rn.getParam("N_SCANS", N_SCANS);
-    cout << "bag file name: " << bag_fn << endl;
+    // rn.getParam("bag_fn", bag_fn);
+    // rn.getParam("N_SCANS", N_SCANS);
+    bag_fn = pkg_dir + yml["out_bag"].as<string>(); IC(bag_fn);
+    // cout << "bag file name: " << bag_fn << endl;
     
     string vis_topic = "vis_pc";
     string vis_pose_topic = "vis_pose";
@@ -75,7 +85,7 @@ int main(int argc, char *argv[])
         lidar_odom.push_back(*od);
     }
 
-    cout << "lidar_odom size: " << lidar_odom.size() << endl;
+    IC(lidar_odom.size());
 
     PointCloudXYZI::Ptr pc = pcl::make_shared<PointCloudXYZI>();
 

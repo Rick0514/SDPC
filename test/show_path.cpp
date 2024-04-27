@@ -3,8 +3,13 @@
 #include <sstream>
 #include <string>
 #include <sixdofcubicspline.hpp>
-#include <ros/ros.h>
 #include <nav_msgs/Path.h>
+#include <yaml-cpp/yaml.h>
+
+#include <ros/ros.h>
+#include <ros/package.h>
+
+#include <icecream.hpp>
 
 using namespace std;
 
@@ -39,21 +44,28 @@ int main(int argc, char *argv[])
 
     // cout << s(2.5) << endl;
 
+    // get rospackage dir
+    string pkg_dir = ros::package::getPath("sdpc");
+    // load params from mld.yaml
+    YAML::Node yml = YAML::LoadFile(pkg_dir + "/config/mld.yaml");
+
     ros::init(argc, argv, "show_path_node");
     ros::NodeHandle nh("~");
     ros::Publisher pub = nh.advertise<nav_msgs::Path>("/path", 1, true);
 
     double total_time, dt;
     string path_fn;
-    nh.getParam("total_time", total_time);
-    nh.getParam("dt", dt);
-    nh.getParam("path_fn", path_fn);
+    // nh.getParam("total_time", total_time);
+    // nh.getParam("dt", dt);
+    // nh.getParam("path_fn", path_fn);
 
-    // cout << "total_time: " << total_time << endl;
-    // cout << path_fn << endl;
-    // double total_time = 10;
-    // string fn = "/home/rick/chore/lips/lips_matlab/input/path_test.txt";
+    // load params from yml
+    total_time = yml["path"]["total_time"].as<double>();
+    dt = yml["path"]["dt"].as<double>();
+    path_fn = pkg_dir + yml["path"]["path_fn"].as<string>(); 
     
+    IC(total_time, dt, path_fn);
+
     SixDofCubicSpline scs(total_time, path_fn);
     double start_time = 0;
 

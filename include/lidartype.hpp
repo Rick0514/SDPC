@@ -25,7 +25,6 @@ using std::vector;
 using std::pair;
 using point_t = ignition::math::Vector3d;
 using IQd = ignition::math::Quaterniond;
-using v_time_pc = vector<ig_pc>; // vector of a bunch of points with same timestamp
 
 struct ig_pc
 {
@@ -33,6 +32,8 @@ struct ig_pc
     vector<point_t> pc;
     vector<int> ring;
 };
+
+using v_time_pc = vector<ig_pc>; // vector of a bunch of points with same timestamp
 
 struct LivoxRotateInfo {
     double time;
@@ -132,14 +133,7 @@ public:
 
     std::string name;
 
-    static std::shared_ptr<LidarBase> create(string type, YAML::Node& yml)
-    {
-        if(type == "velo" || type == "velodyne"){
-            return std::make_shared<Velodyne>(yml);
-        }else if(type == "avia"){
-            return std::make_shared<Avia>(yml);
-        }
-    }
+    static std::shared_ptr<LidarBase> create(string type, YAML::Node& yml);
 };
 
 
@@ -170,6 +164,7 @@ public:
         hor_n = yyml["hor_sample"].as<int>();
 
         ig_pc igpc;
+        igpc.timestamp = 0;
         igpc.pc.resize(hor_n * ver_n);
         igpc.ring.resize(hor_n * ver_n);
 
@@ -181,7 +176,8 @@ public:
         }
 
         for(int i=0; i<hor_n; i++){
-            double deg = hor_ang.first + (hor_ang.second - hor_ang.first) * i / hor_n * Deg2Rad;
+            double deg = hor_ang.first + (hor_ang.second - hor_ang.first) * i / hor_n;
+            deg *= Deg2Rad;
             
             IQd ray;
             for(int j=0; j<ver_n; j++){
@@ -221,7 +217,9 @@ public:
 
         end_points.resize(hor_n);
         for(int i=0; i<hor_n; i++){
-            double deg = hor_ang.first + (hor_ang.second - hor_ang.first) * i / hor_n * Deg2Rad;
+            double deg = hor_ang.first + (hor_ang.second - hor_ang.first) * i / hor_n;
+            deg *= Deg2Rad;
+
             double t0 = 1.0 / hz * i / hor_n;
             
             IQd ray;
@@ -269,7 +267,7 @@ public:
         sensor_msgs::PointCloud2 ros_pc;
         pcl::toROSMsg(vpc, ros_pc);
         ros_pc.header.stamp = ros::Time().fromSec(f_stp);
-        ros_pc.header.frame_id = name;
+        ros_pc.header.frame_id = string("/") + topic;
         rbag.write(topic, ros_pc.header.stamp, ros_pc);
     }
 };
@@ -373,10 +371,19 @@ public:
             msg.points.push_back(cp);
         }
 
-        rbag.write(topic, msg.header.stamp, msg);
+        rbag.write(string("/") + topic, msg.header.stamp, msg);
     }
 
 };
+
+std::shared_ptr<LidarBase> LidarBase::create(string type, YAML::Node& yml)
+{
+    if(type == "velo" || type == "velodyne"){
+        return std::make_shared<Velodyne>(yml);
+    }else if(type == "avia"){
+        return std::make_shared<Avia>(yml);
+    }
+}
 
 } // namespace lidartype
 

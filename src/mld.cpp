@@ -20,7 +20,6 @@ using IV3d = ignition::math::Vector3d;
 using IQd = ignition::math::Quaterniond;
 using IP6d = ignition::math::Pose3d;
 
-
 class GzLidar
 {
 public:
@@ -30,6 +29,7 @@ public:
                 gazebo::physics::CollisionPtr()));
         auto yyml = yml["lidar_info"];
         yyml["livox"]["scan_dir"] = src_dir + yyml["livox"]["scan_dir"].as<string>();
+
         ld = lidartype::LidarBase::create(type, yyml);
 
         // init rays
@@ -88,6 +88,8 @@ public:
         return hits;
     }
 
+    std::shared_ptr<lidartype::LidarBase> getLidar() { return ld; }
+
 protected:
 
     std::shared_ptr<lidartype::LidarBase> ld;
@@ -112,14 +114,17 @@ protected:
 
     vec_t<string> lidar_types, lidar_topics;
     string odom_topic;
+    int lidar_num;
 
     rosbag::Bag rbag;
 
+    string path_fn;
+    double total_time;
     SixDofCubicSpline* sixsp;
 
-    double total_time;
-
     vec_t<GzLidar> glds;
+
+    vec_t<IP6d> igexts;
 
 };
 
@@ -140,30 +145,51 @@ MultiLidars::MultiLidars()
     odom_topic = yml["odom_topic"].as<string>();
     hz = yml["lidar_info"]["hz"].as<float>();
 
-    string bag_fn = src_dir + yml["out_bag"].as<string>();
+    lidar_num = lidar_topics.size();
+
+    string bag_fn = src_dir + yml["out_bag"].as<string>();  IC(bag_fn);
     rbag.open(bag_fn, rosbag::bagmode::Read);
 
-    total_time = yml["total_time"].as<double>();
-    
+    // for path
+    path_fn = src_dir + yml["path"]["path_fn"].as<string>();
+    total_time = yml["path"]["total_time"].as<double>();
+    sixsp = new SixDofCubicSpline(total_time, path_fn);
+
     for(auto& t : lidar_types){
         glds.push_back(GzLidar(world, t, yml));
+    }
+
+    // for exts
+    auto exts = yml["exts"].as<vector<float>>();
+    assert(exts.size() == 7 * lidar_num);
+
+    for(int i=0; i<lidar_num; i++){
+        int idx = 7 * i;
+        IV3d pos(exts[idx+4], exts[idx+5], exts[idx+6]);
+        IQd rot(exts[idx+3], exts[idx], exts[idx+1], exts[idx+2]);
+        igexts.push_back(IP6d(pos, rot));
     }
 }
 
 void MultiLidars::Run()
 {
-
     double start_time = 0.1;
 
     while(start_time < total_time){
+        
+        auto T_w_b = sixsp->getPose(start_time);
+        
+        for (int i = 0; i < lidar_num; i++)
+        {
+            auto& ld = glds[i];
+            const auto& T_b_li = igexts[i];
+            auto T_w_li = T_w_b * T_b_li;
 
-        for(const auto& ld : glds){
-            
+            auto hits = ld.getPointCloud(T_w_li, start_time);
+            ld.getLidar()->writeToBag(rbag, hits, lidar_topics[i]);
         }
-
         start_time += 1.0 / hz;
     }
-    
 }
 
 int main(int argc, char **argv)

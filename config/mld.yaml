@@ -1,13 +1,17 @@
-
-world_fn: "shape"
+world_fn: "/worlds/shape"
 
 # velo/avia/mid360
 lidar_types: ["velo"]
-lidar_topics: []
+lidar_topics: ["velo1"]
 odom_topic: "/odom"
 
 # from base to liadr
 exts: []
+
+path:
+    dt: 0.1
+    path_fn: "/path_dir/path_test.txt"
+    total_time: 10.0
 
 lidar_info:
 
@@ -24,13 +28,10 @@ lidar_info:
         hor_samples: 1800
 
     livox:
-
-        scan_dir: ""
+        scan_dir: "/doc/scan_mode/avia.csv"
         samples: 24000
 
-total_time: 10.0
-
-out_bag: ""
+out_bag: "/bag/velo.bag"
 
 
 
