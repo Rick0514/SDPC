@@ -1,10 +1,11 @@
-#include "gazebo/test/ServerFixture.hh"
-#include "gazebo/physics/physics.hh"
-#include "gazebo/test/helper_physics_generator.hh"
+#include <gazebo/gazebo.hh>
+#include <gazebo/common/common.hh>
+#include <gazebo/physics/physics.hh>
 
 #include <basic.hpp>
 #include <icecream.hpp>
 #include <yaml-cpp/yaml.h>
+#include <tictoc.hpp>
 
 #include <rosbag/bag.h>
 
@@ -12,8 +13,10 @@
 #include <lidartype.hpp>
 
 using std::string;
+using std::cout;
+using std::endl;
+
 string src_dir = "";
-static constexpr float Nan = 1000;
 
 using namespace gazebo;
 using IV3d = ignition::math::Vector3d;
@@ -30,14 +33,18 @@ public:
         auto yyml = yml["lidar_info"];
         yyml["livox"]["scan_dir"] = src_dir + yyml["livox"]["scan_dir"].as<string>();
 
+        IC();
+
         ld = lidartype::LidarBase::create(type, yyml);
+
+        IC();
 
         // init rays
         auto frame = ld->getFrame(0);
         for(const auto& f : frame){
             for(int i=0; i<f.pc.size(); i++){
                 const auto& pt = f.pc[i];
-                rays->AddRay(IV3d(0, 0, 0), pt);
+                rays->AddRay(pt * ld->getRange().first, pt * ld->getRange().second);
             }
         }
     }
@@ -45,23 +52,16 @@ public:
     lidartype::v_time_pc getPointCloud(const IP6d& po, double tt)
     {
         auto frame = ld->getFrame(tt);
-        int idx = 0;
-        for(const auto& f : frame){
-            for(int i=0; i<f.pc.size(); i++){
-                const auto& pt = f.pc[i];
-                IV3d new_ray = po.Rot() * pt + po.Pos();
-                rays->Ray(idx++)->SetPoints(po.Pos(), new_ray);
-                // reset
-                rays->Ray(idx)->SetLength(Nan);
-            }
-        }
-        rays->UpdateRays();
 
         lidartype::v_time_pc hits;
         hits.reserve(frame.size());
-        idx = 0;
         double dist;
+        string entity;
         GenNoise gn;
+        
+        int idx = 0;
+        double range = ld->getRange().second - ld->getRange().first;
+
         for(const auto& f : frame){
             lidartype::ig_pc tmp_pc;
             tmp_pc.timestamp = f.timestamp;
@@ -70,18 +70,25 @@ public:
 
             for(int i=0; i<f.pc.size(); i++){
                 const auto& p = f.pc[i];
-                IV3d new_ray = po.Rot() * p + po.Pos();
-                dist = rays->Ray(idx++)->GetLength();
+                IV3d st_ray = po.Rot() * p * ld->getRange().first + po.Pos();
+                IV3d ed_ray = po.Rot() * p * ld->getRange().second + po.Pos();
+                rays->Ray(idx)->SetLength(range);
+                rays->Ray(idx)->SetPoints(st_ray, ed_ray);
+
+                // reset
+                entity.clear(); dist = 1e6;
+                rays->Ray(idx)->GetIntersection(dist, entity);
+                
+                idx++;
+                if(entity.empty() || dist > range)    continue;
+
+                // if(idx % 100 == 0)   IC(dist);
 
                 // noise currupted
                 dist += gn.getNoise(ld->getNoiseStd());
-                double ra = dist / ld->getMaxRange();
-
-                if(ra <= 1.0){
-                    lidartype::point_t pt = ra * p;
-                    tmp_pc.ring.push_back(f.ring[i]);
-                    tmp_pc.pc.push_back(pt);
-                }
+                lidartype::point_t pt = dist * p;
+                tmp_pc.ring.push_back(f.ring[i]);
+                tmp_pc.pc.push_back(pt);
             }
             if(tmp_pc.pc.size())    hits.push_back(tmp_pc);
         }
@@ -96,7 +103,7 @@ protected:
     gazebo::physics::MultiRayShapePtr rays;
 };
 
-class MultiLidars : public ServerFixture
+class MultiLidars
 {
 public:
 
@@ -104,8 +111,6 @@ public:
     
     void Run();
     
-    void TestBody() override {}
-
 protected:
 
     string world_fn;
@@ -136,9 +141,8 @@ MultiLidars::MultiLidars()
     world_fn = yml["world_fn"].as<string>();
     world_fn = src_dir + world_fn; IC(world_fn);
 
-    // Load the shapes world
-    Load(world_fn, true, "ode");
-    physics::WorldPtr world = physics::get_world("default");
+    // Load the world
+    gazebo::physics::WorldPtr world = gazebo::loadWorld(world_fn);
 
     lidar_types = yml["lidar_types"].as<vec_t<string>>();
     lidar_topics = yml["lidar_topics"].as<vec_t<string>>();
@@ -148,7 +152,7 @@ MultiLidars::MultiLidars()
     lidar_num = lidar_topics.size();
 
     string bag_fn = src_dir + yml["out_bag"].as<string>();  IC(bag_fn);
-    rbag.open(bag_fn, rosbag::bagmode::Read);
+    rbag.open(bag_fn, rosbag::bagmode::Write);
 
     // for path
     path_fn = src_dir + yml["path"]["path_fn"].as<string>();
@@ -159,8 +163,10 @@ MultiLidars::MultiLidars()
         glds.push_back(GzLidar(world, t, yml));
     }
 
+    IC();
+
     // for exts
-    auto exts = yml["exts"].as<vector<float>>();
+    auto exts = yml["exts"].as<vector<float>>(); IC(exts);
     assert(exts.size() == 7 * lidar_num);
 
     for(int i=0; i<lidar_num; i++){
@@ -169,6 +175,8 @@ MultiLidars::MultiLidars()
         IQd rot(exts[idx+3], exts[idx], exts[idx+1], exts[idx+2]);
         igexts.push_back(IP6d(pos, rot));
     }
+
+    IC();
 }
 
 void MultiLidars::Run()
@@ -185,11 +193,14 @@ void MultiLidars::Run()
             const auto& T_b_li = igexts[i];
             auto T_w_li = T_w_b * T_b_li;
 
-            auto hits = ld.getPointCloud(T_w_li, start_time);
+            auto hits = ld.getPointCloud(T_w_li, start_time); IC(hits.size());
+
             ld.getLidar()->writeToBag(rbag, hits, lidar_topics[i]);
         }
         start_time += 1.0 / hz;
     }
+
+    rbag.close();
 }
 
 int main(int argc, char **argv)
@@ -199,8 +210,18 @@ int main(int argc, char **argv)
     src_dir = ROOT_DIR;
 #endif
 
+    Common_tools::Timer timer;
+    
+    timer.tic("init");
+    gazebo::setupServer(argc, argv);
     MultiLidars mld;
+    cout << timer.toc_string("init") << endl;
+
+    timer.tic("run");    
     mld.Run();
+    cout << timer.toc_string("run") << endl;
+
+    IC("finished!");
 
     return 0;
 }

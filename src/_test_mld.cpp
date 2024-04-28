@@ -31,7 +31,7 @@ void MultiLidars::Run()
     world_fn = ROOT_DIR;
 #endif
 
-    world_fn += "/worlds/shape";
+    world_fn += "/worlds/trees";
 
     IC(world_fn);
     
@@ -47,7 +47,7 @@ void MultiLidars::Run()
     double dist;
     std::string entity;
 
-    ray->SetPoints(ignition::math::Vector3d(-1, 0, 0.5),
+    ray->SetPoints(ignition::math::Vector3d(0, 0, 0.5),
                     ignition::math::Vector3d(10, 0, 0.5));
     ray->GetIntersection(dist, entity);
 
@@ -56,8 +56,8 @@ void MultiLidars::Run()
     // EXPECT_NEAR(dist, 0.5, 1e-4);
     // EXPECT_EQ(entity, "box::link::collision");
 
-    ray->SetPoints(ignition::math::Vector3d(-1, 1.5, 0.5),
-                    ignition::math::Vector3d(10, 1.5, 0.5));
+    ray->SetPoints(ignition::math::Vector3d(-1, 0, 0.5),
+                    ignition::math::Vector3d(50, 0, 0.5));
     ray->GetIntersection(dist, entity);
 
     IC(dist, 0.5, entity);
@@ -87,6 +87,8 @@ int main(int argc, char **argv)
 
     MultiLidars mld;
     mld.Run();
+
+    IC("finished!");
 
     return 0;
 }

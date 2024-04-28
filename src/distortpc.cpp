@@ -186,6 +186,7 @@ void DistortPC::DistortPCHandler()
     
     double dist;
     string entity;
+    double range = lidar->getRange().second - lidar->getRange().first;
 
     ignition::math::Pose3d lidarInImu(tLI, rLI);
     nav_msgs::Odometry lidar_pose;
@@ -216,42 +217,43 @@ void DistortPC::DistortPCHandler()
 
                 IV3d new_ray = lidarInG.Rot() * p + lidarInG.Pos();
                 laserShape->SetPoints(lidarInG.Pos(), new_ray);
+                // reset
+                entity.clear(); dist = 1e6;
                 laserShape->GetIntersection(dist, entity);
 
+                if(entity.empty() || dist > range)  continue;
+                
                 // noise currupted
                 dist += gaussianKernel(0.0, lidar->getNoiseStd());
-                double ra = dist / lidar->getMaxRange();
+                double ra = dist / lidar->getRange().second;
 
-                if(entity.size() && ra <= 1.0){
-                    tmp_pc.ring.push_back(f.ring[i]);
+                tmp_pc.ring.push_back(f.ring[i]);
+                lidartype::point_t pt = ra * p;
+                tmp_pc.pc.push_back(pt);
 
-                    lidartype::point_t pt = ra * p;
-                    tmp_pc.pc.push_back(pt);
+                // save undist pc
+                if(save_pcd){
+                    auto d_pt = dist_lidarInG.Rot() * pt + dist_lidarInG.Pos();
+                    auto ud_pt = lidarInG.Rot() * pt + lidarInG.Pos();
+                    pcl::PointXYZ dp, udp;
+                    dp.x = d_pt.X();
+                    dp.y = d_pt.Y();
+                    dp.z = d_pt.Z();
+                    udp.x = ud_pt.X();
+                    udp.y = ud_pt.Y();
+                    udp.z = ud_pt.Z();
+                    dist_pc->push_back(dp);
+                    undist_pc->push_back(udp);
 
-                    // save undist pc
-                    if(save_pcd){
-                        auto d_pt = dist_lidarInG.Rot() * pt + dist_lidarInG.Pos();
-                        auto ud_pt = lidarInG.Rot() * pt + lidarInG.Pos();
-                        pcl::PointXYZ dp, udp;
-                        dp.x = d_pt.X();
-                        dp.y = d_pt.Y();
-                        dp.z = d_pt.Z();
-                        udp.x = ud_pt.X();
-                        udp.y = ud_pt.Y();
-                        udp.z = ud_pt.Z();
-                        dist_pc->push_back(dp);
-                        undist_pc->push_back(udp);
+                    if(dist_pc->size() > 5e6){
+                        vgptr->setInputCloud(dist_pc);
+                        vgptr->filter(*dist_pc);
 
-                        if(dist_pc->size() > 5e6){
-                            vgptr->setInputCloud(dist_pc);
-                            vgptr->filter(*dist_pc);
+                        vgptr->setInputCloud(undist_pc);
+                        vgptr->filter(*undist_pc);
 
-                            vgptr->setInputCloud(undist_pc);
-                            vgptr->filter(*undist_pc);
-
-                            gzmsg << "after dist size: " << dist_pc->size() << endl;
-                            gzmsg << "after undist size: " << undist_pc->size() << endl;
-                        }
+                        gzmsg << "after dist size: " << dist_pc->size() << endl;
+                        gzmsg << "after undist size: " << undist_pc->size() << endl;
                     }
                 }
             }

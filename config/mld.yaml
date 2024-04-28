@@ -5,13 +5,13 @@ lidar_types: ["velo"]
 lidar_topics: ["velo1"]
 odom_topic: "/odom"
 
-# from base to liadr
-exts: []
+# from base to liadr, xyzw-xyz
+exts: [0, 0, 0, 1, 0, 0, 0]
 
 path:
     dt: 0.1
-    path_fn: "/path_dir/path_test.txt"
-    total_time: 10.0
+    path_fn: "/path_dir/path_line.txt"
+    total_time: 4.0
 
 lidar_info:
 
@@ -24,8 +24,8 @@ lidar_info:
         ver_range: [-15, 15]
         hor_range: [0, 360]
         
-        ver_samples: 16
-        hor_samples: 1800
+        ver_sample: 16
+        hor_sample: 1800
 
     livox:
         scan_dir: "/doc/scan_mode/avia.csv"

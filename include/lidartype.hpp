@@ -126,7 +126,7 @@ public:
 
     float getHz() const { return hz;  }
     double getNoiseStd() const { return noise_std; }
-    double getMaxRange() const { return max_range; }
+    pair<double, double> getRange() const { return {min_range, max_range}; }
 
     virtual v_time_pc getFrame(double start_time) = 0;
     virtual void writeToBag(rosbag::Bag& bag, const v_time_pc& vp, const std::string& topic) {}
@@ -182,7 +182,7 @@ public:
             IQd ray;
             for(int j=0; j<ver_n; j++){
                 ray.Euler(point_t(0.0, zen[j], deg));
-                igpc.pc[i * ver_n + j] = ray * point_t(max_range, 0, 0);
+                igpc.pc[i * ver_n + j] = ray * point_t(1.0, 0, 0);
                 igpc.ring[i * ver_n + j] = j;
             }
         }
@@ -229,7 +229,7 @@ public:
             ver_pc.ring.resize(ver_n);
             for(int j=0; j<ver_n; j++){
                 ray.Euler(point_t(0.0, zen[j], deg));
-                ver_pc.pc[j] = ray * point_t(max_range, 0, 0);
+                ver_pc.pc[j] = ray * point_t(1.0, 0, 0);
                 ver_pc.ring[j] = j;
             }
             end_points[i] = ver_pc;
@@ -327,7 +327,7 @@ public:
             ig_pc pc;
         
             ray.Euler(point_t(0.0, info.zenith, info.azimuth));
-            auto axis = ray * point_t(max_range, 0.0, 0.0);
+            auto axis = ray * point_t(1.0, 0.0, 0.0);
             pc.timestamp = start_time + (info.time - ofs_time);
             pc.pc.push_back(axis);
             pc.ring.push_back(info.line);   // use ring to store line
