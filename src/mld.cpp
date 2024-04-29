@@ -8,6 +8,7 @@
 #include <tictoc.hpp>
 
 #include <rosbag/bag.h>
+#include <nav_msgs/Odometry.h>
 
 #include <sixdofcubicspline.hpp>
 #include <lidartype.hpp>
@@ -30,10 +31,9 @@ public:
         rays = boost::dynamic_pointer_cast<gazebo::physics::MultiRayShape>(
                 w->Physics()->CreateShape("multiray",
                 gazebo::physics::CollisionPtr()));
-        auto yyml = yml["lidar_info"];
-        yyml["livox"]["scan_dir"] = src_dir + yyml["livox"]["scan_dir"].as<string>();
 
-        IC();
+        auto yyml = yml["lidar_info"];
+        IC(yyml["livox"]["scan_dir"].as<string>());
 
         ld = lidartype::LidarBase::create(type, yyml);
 
@@ -62,6 +62,7 @@ public:
         int idx = 0;
         double range = ld->getRange().second - ld->getRange().first;
 
+        int pc_num = 0;
         for(const auto& f : frame){
             lidartype::ig_pc tmp_pc;
             tmp_pc.timestamp = f.timestamp;
@@ -82,16 +83,19 @@ public:
                 idx++;
                 if(entity.empty() || dist > range)    continue;
 
-                // if(idx % 100 == 0)   IC(dist);
-
                 // noise currupted
-                dist += gn.getNoise(ld->getNoiseStd());
+                double ns = gn.getNoise(ld->getNoiseStd());
+                dist += ns;
                 lidartype::point_t pt = dist * p;
+                                
                 tmp_pc.ring.push_back(f.ring[i]);
                 tmp_pc.pc.push_back(pt);
+                pc_num++;
+
             }
             if(tmp_pc.pc.size())    hits.push_back(tmp_pc);
         }
+        IC(ld->name, pc_num);
         return hits;
     }
 
@@ -154,6 +158,8 @@ MultiLidars::MultiLidars()
     string bag_fn = src_dir + yml["out_bag"].as<string>();  IC(bag_fn);
     rbag.open(bag_fn, rosbag::bagmode::Write);
 
+    yml["lidar_info"]["livox"]["scan_dir"] = src_dir + yml["lidar_info"]["livox"]["scan_dir"].as<string>();
+
     // for path
     path_fn = src_dir + yml["path"]["path_fn"].as<string>();
     total_time = yml["path"]["total_time"].as<double>();
@@ -182,22 +188,39 @@ MultiLidars::MultiLidars()
 void MultiLidars::Run()
 {
     double start_time = 0.1;
+    double tt = start_time;
+    double dur = 1.0 / hz;
 
-    while(start_time < total_time){
-        
-        auto T_w_b = sixsp->getPose(start_time);
-        
+    while(tt < total_time)
+    {
+        auto T_w_b = sixsp->getPose(tt);
+        // convert T_w_b to Odometry and save to rbag
+        nav_msgs::Odometry odom;
+        odom.header.stamp = ros::Time(tt);
+        odom.header.frame_id = "map";
+        odom.child_frame_id = "base_link";
+        auto p = T_w_b.Pos();
+        auto q = T_w_b.Rot();
+        odom.pose.pose.position.x = p.X();
+        odom.pose.pose.position.y = p.Y();
+        odom.pose.pose.position.z = p.Z();
+        odom.pose.pose.orientation.w = q.W();
+        odom.pose.pose.orientation.x = q.X();
+        odom.pose.pose.orientation.y = q.Y();
+        odom.pose.pose.orientation.z = q.Z();
+        rbag.write(odom_topic, ros::Time(tt), odom);
+
         for (int i = 0; i < lidar_num; i++)
         {
             auto& ld = glds[i];
             const auto& T_b_li = igexts[i];
-            auto T_w_li = T_w_b * T_b_li;
+            // anti-human api, the order reverse from our normal sense
+            auto T_w_li = T_b_li + T_w_b;
 
-            auto hits = ld.getPointCloud(T_w_li, start_time); IC(hits.size());
-
+            auto hits = ld.getPointCloud(T_w_li, tt);
             ld.getLidar()->writeToBag(rbag, hits, lidar_topics[i]);
         }
-        start_time += 1.0 / hz;
+        tt += dur;
     }
 
     rbag.close();

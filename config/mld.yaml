@@ -1,12 +1,17 @@
-world_fn: "/worlds/shape"
+world_fn: "/worlds/trees"
 
 # velo/avia/mid360
-lidar_types: ["velo"]
-lidar_topics: ["velo1"]
-odom_topic: "/odom"
+lidar_types: ["velo", "avia", "avia"]
+lidar_topics: ["velo1", "avia1", "avia2"]
+# lidar_types: ["avia"]
+# lidar_topics: ["avia1"]
+odom_topic: "odom"
 
 # from base to liadr, xyzw-xyz
-exts: [0, 0, 0, 1, 0, 0, 0]
+# exts: [0, 0, 1, 0, 0, 0, 0.5]
+exts: [0, 0.258819, 0, 0.965926, 0, 0, 0.1, 
+      0, 0, 1, 0, 0, 0, 0.5, 
+      0, 0, 0.707107, 0.707107, 0, 0.1, 0]
 
 path:
     dt: 0.1
@@ -20,7 +25,6 @@ lidar_info:
     dist_noise: 0.01
 
     velo:
-        ver_ang: []
         ver_range: [-15, 15]
         hor_range: [0, 360]
         
@@ -28,11 +32,9 @@ lidar_info:
         hor_sample: 1800
 
     livox:
-        scan_dir: "/doc/scan_mode/avia.csv"
+        pc_type: "pc2"  # or "livox"
+        scan_dir: "/doc/scan_mode/"
         samples: 24000
 
 out_bag: "/bag/velo.bag"
-
-
-
     

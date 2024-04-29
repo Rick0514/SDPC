@@ -13,8 +13,10 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <livox_ros_driver/CustomMsg.h>
 
+#include <pcl/io/pcd_io.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <pcl_conversions/pcl_conversions.h>
 
 namespace lidartype
 {
@@ -55,8 +57,8 @@ protected:
 public:
 
     LidarBase(YAML::Node& yml){
-        auto hz = yml["hz"].as<float>();
-        auto noise_std = yml["dist_noise"].as<double>();
+        hz = yml["hz"].as<float>();
+        noise_std = yml["dist_noise"].as<double>();
         auto rg = yml["range"].as<vector<float>>();
         min_range = rg[0];
         max_range = rg[1];
@@ -267,7 +269,7 @@ public:
         sensor_msgs::PointCloud2 ros_pc;
         pcl::toROSMsg(vpc, ros_pc);
         ros_pc.header.stamp = ros::Time().fromSec(f_stp);
-        ros_pc.header.frame_id = string("/") + topic;
+        ros_pc.header.frame_id = topic;
         rbag.write(topic, ros_pc.header.stamp, ros_pc);
     }
 };
@@ -281,6 +283,7 @@ class Avia : public LidarBase
 
     int start_idx{0};
     string scan_dir;
+    string pc_type;
 
 public:
 
@@ -289,8 +292,10 @@ public:
         this->name = "avia";
 
         auto yyml = yml["livox"];
-        scan_dir = yml["scan_dir"].as<string>();
-        samples = yml["samples"].as<int>();
+
+        pc_type = yyml["pc_type"].as<string>();
+        scan_dir = yyml["scan_dir"].as<string>();
+        samples = yyml["samples"].as<int>();
 
         vector<vector<double>> datas;
         readCsvFile(scan_dir + this->name + ".csv", datas);
@@ -344,34 +349,56 @@ public:
     virtual void writeToBag(rosbag::Bag& rbag, const v_time_pc& vp, const std::string& topic) override
     {
         if(vp.empty())  return;
+
+        if(pc_type == "livox"){
+            livox_ros_driver::CustomMsg msg;
+            msg.header.frame_id = name;
+
+            ros::Time rt(vp.front().timestamp);
+            msg.timebase = rt.toNSec();
+            msg.header.stamp = rt;
+            msg.point_num = vp.size();
+            msg.points.reserve(msg.point_num);
+
+            for(const auto& p : vp){
                 
-        livox_ros_driver::CustomMsg msg;
-        msg.header.frame_id = name;
+                const auto& pp = p.pc[0];            
+                livox_ros_driver::CustomPoint cp;
 
-        ros::Time rt(vp.front().timestamp);
-        msg.timebase = rt.toNSec();
-        msg.header.stamp = rt;
-        msg.point_num = vp.size();
-        msg.points.reserve(msg.point_num);
+                cp.x = pp.X();
+                cp.y = pp.Y();
+                cp.z = pp.Z();
 
-        for(const auto& p : vp){
+                cp.reflectivity = 100;
+                cp.tag = 0x10;
+                cp.line = p.ring[0];
+                cp.offset_time = p.timestamp * 1e9 - msg.timebase;
+
+                msg.points.push_back(cp);
+            }
+            rbag.write(topic, msg.header.stamp, msg);
+        }else{
+            pcl::VelodynePC vpc;
+            vpc.reserve(vp.size());
+            double f_stp = vp.front().timestamp;
             
-            const auto& pp = p.pc[0];            
-            livox_ros_driver::CustomPoint cp;
-
-            cp.x = pp.X();
-            cp.y = pp.Y();
-            cp.z = pp.Z();
-
-            cp.reflectivity = 100;
-            cp.tag = 0x10;
-            cp.line = p.ring[0];
-            cp.offset_time = p.timestamp * 1e9 - msg.timebase;
-
-            msg.points.push_back(cp);
+            for(const auto& p : vp){
+                const auto& pp = p.pc[0]; 
+                pcl::VelodynePoint pt;
+                pt.time = p.timestamp - f_stp;
+                pt.ring = p.ring[0];
+                pt.intensity = 100.0;
+                pt.x = pp.X();
+                pt.y = pp.Y();
+                pt.z = pp.Z();
+                vpc.emplace_back(std::move(pt));
+            }
+            sensor_msgs::PointCloud2 ros_pc;
+            pcl::toROSMsg(vpc, ros_pc);
+            ros_pc.header.stamp = ros::Time().fromSec(f_stp);
+            ros_pc.header.frame_id = topic;
+            rbag.write(topic, ros_pc.header.stamp, ros_pc);
         }
-
-        rbag.write(string("/") + topic, msg.header.stamp, msg);
     }
 
 };
