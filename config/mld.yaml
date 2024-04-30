@@ -1,22 +1,25 @@
 world_fn: "/worlds/trees"
 
 # velo/avia/mid360
-lidar_types: ["velo", "avia", "avia"]
-lidar_topics: ["velo1", "avia1", "avia2"]
+# lidar_types: ["velo", "avia", "avia"]
+# lidar_topics: ["velo1", "avia1", "avia2"]
+lidar_types: ["velo", "avia"]
+lidar_topics: ["velo1", "avia1"]
 # lidar_types: ["avia"]
 # lidar_topics: ["avia1"]
 odom_topic: "odom"
+gt_odom_topic: "gt_odom"
 
 # from base to liadr, xyzw-xyz
 # exts: [0, 0, 1, 0, 0, 0, 0.5]
 exts: [0, 0.258819, 0, 0.965926, 0, 0, 0.1, 
-      0, 0, 1, 0, 0, 0, 0.5, 
-      0, 0, 0.707107, 0.707107, 0, 0.1, 0]
+      0, 0, 1, 0, 0, 0, 0.5]
+      # 0, 0, 0.707107, 0.707107, 0, 0.1, 0]
 
 path:
     dt: 0.1
-    path_fn: "/path_dir/path_line.txt"
-    total_time: 4.0
+    path_fn: "/path_dir/path8.txt"
+    total_time: 8.0
 
 lidar_info:
 
@@ -38,3 +41,4 @@ lidar_info:
 
 out_bag: "/bag/velo.bag"
     
+odom_noise: [3, 0.05]

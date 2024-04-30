@@ -24,6 +24,71 @@ using IV3d = ignition::math::Vector3d;
 using IQd = ignition::math::Quaterniond;
 using IP6d = ignition::math::Pose3d;
 
+class AddNoiseToPose
+{
+public:
+
+    AddNoiseToPose() {}
+    AddNoiseToPose(double ang_, double trans_) : ang_noise(ang_), trans_noise(trans_) {} 
+
+    void setNoise(double ang_, double trans_){
+        // set ang_noise and trans_noise
+        ang_noise = ang_;
+        trans_noise = trans_;
+    }
+
+    double getNoise(double std)
+    {
+        std::normal_distribution<double> d(0.0, std);
+        return d(gen);
+    }
+
+    IP6d noisePose(const IP6d& p)
+    {
+        // add noise to p
+        auto pos = p.Pos();
+        auto rot = p.Rot();
+
+        // add noise to pos
+        IV3d axis;
+        double ang;
+        rot.ToAxis(axis, ang);
+        ang += getNoise(ang_noise);
+        rot = IQd(axis, ang);
+
+        for(int i=0; i<3; i++){
+            pos[i] += getNoise(trans_noise);
+        }
+
+        return IP6d(pos, rot);
+    }
+
+    static nav_msgs::Odometry IgToOdomMsg(const IP6d& po, double tt, string frame_id){
+        nav_msgs::Odometry odom;
+        odom.header.stamp = ros::Time(tt);
+        odom.header.frame_id = "map";
+        odom.child_frame_id = frame_id;
+        auto p = po.Pos();
+        auto q = po.Rot();
+        odom.pose.pose.position.x = p.X();
+        odom.pose.pose.position.y = p.Y();
+        odom.pose.pose.position.z = p.Z();
+        odom.pose.pose.orientation.w = q.W();
+        odom.pose.pose.orientation.x = q.X();
+        odom.pose.pose.orientation.y = q.Y();
+        odom.pose.pose.orientation.z = q.Z();
+        return odom;
+    }
+
+
+protected:
+    std::random_device rd{};
+    std::mt19937 gen{rd()};
+
+    double ang_noise, trans_noise;
+};
+
+
 class GzLidar
 {
 public:
@@ -122,7 +187,7 @@ protected:
     float hz;
 
     vec_t<string> lidar_types, lidar_topics;
-    string odom_topic;
+    string odom_topic, gt_odom_topic;
     int lidar_num;
 
     rosbag::Bag rbag;
@@ -134,6 +199,8 @@ protected:
     vec_t<GzLidar> glds;
 
     vec_t<IP6d> igexts;
+
+    vec_t<double> odom_noise;
 
 };
 
@@ -151,6 +218,8 @@ MultiLidars::MultiLidars()
     lidar_types = yml["lidar_types"].as<vec_t<string>>();
     lidar_topics = yml["lidar_topics"].as<vec_t<string>>();
     odom_topic = yml["odom_topic"].as<string>();
+    gt_odom_topic = yml["gt_odom_topic"].as<string>();
+    odom_noise = yml["odom_noise"].as<vec_t<double>>();
     hz = yml["lidar_info"]["hz"].as<float>();
 
     lidar_num = lidar_topics.size();
@@ -191,24 +260,19 @@ void MultiLidars::Run()
     double tt = start_time;
     double dur = 1.0 / hz;
 
+    static AddNoiseToPose antp(odom_noise[0] * Const::to_rad, odom_noise[1]);
+
     while(tt < total_time)
     {
         auto T_w_b = sixsp->getPose(tt);
         // convert T_w_b to Odometry and save to rbag
-        nav_msgs::Odometry odom;
-        odom.header.stamp = ros::Time(tt);
-        odom.header.frame_id = "map";
-        odom.child_frame_id = "base_link";
-        auto p = T_w_b.Pos();
-        auto q = T_w_b.Rot();
-        odom.pose.pose.position.x = p.X();
-        odom.pose.pose.position.y = p.Y();
-        odom.pose.pose.position.z = p.Z();
-        odom.pose.pose.orientation.w = q.W();
-        odom.pose.pose.orientation.x = q.X();
-        odom.pose.pose.orientation.y = q.Y();
-        odom.pose.pose.orientation.z = q.Z();
+        auto T_w_b_noise = antp.noisePose(T_w_b);
+        nav_msgs::Odometry odom = AddNoiseToPose::IgToOdomMsg(T_w_b_noise, tt, "base_link");
         rbag.write(odom_topic, ros::Time(tt), odom);
+
+        // gt odom
+        nav_msgs::Odometry gt_odom = AddNoiseToPose::IgToOdomMsg(T_w_b, tt, "gt_base_link");
+        rbag.write(gt_odom_topic, ros::Time(tt), gt_odom);
 
         for (int i = 0; i < lidar_num; i++)
         {
