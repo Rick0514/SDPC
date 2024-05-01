@@ -18,6 +18,7 @@ using std::cout;
 using std::endl;
 
 string src_dir = "";
+string task = "record";
 
 using namespace gazebo;
 using IV3d = ignition::math::Vector3d;
@@ -87,7 +88,6 @@ protected:
 
     double ang_noise, trans_noise;
 };
-
 
 class GzLidar
 {
@@ -178,8 +178,29 @@ public:
 
     MultiLidars();    
     
-    void Run();
-    
+    void RecordDataset();
+
+    void ShotAtPoses();
+
+    static void parseTUM(const string& fn, vec_t<IP6d>& poses)
+    {
+        std::ifstream inf(fn);
+        if(!inf.is_open()){
+            cout << "file not found: " << fn;
+            return;
+        }
+
+        string line;
+        while(std::getline(inf, line)){
+            std::istringstream iss(line);
+            double t;
+            IV3d pos;
+            IQd rot;
+            iss >> t >> pos.X() >> pos.Y() >> pos.Z() >> rot.X() >> rot.Y() >> rot.Z() >> rot.W();
+            poses.push_back(IP6d(pos, rot));
+        }
+    }
+ 
 protected:
 
     string world_fn;
@@ -202,6 +223,10 @@ protected:
 
     vec_t<double> odom_noise;
 
+    // for shot
+    string shot_dir, shot_fn;
+    vec_t<IP6d> shot_poses;
+
 };
 
 MultiLidars::MultiLidars()
@@ -210,7 +235,8 @@ MultiLidars::MultiLidars()
     auto yml = YAML::Load(inf);
 
     world_fn = yml["world_fn"].as<string>();
-    world_fn = src_dir + world_fn; IC(world_fn);
+    task = yml["task"].as<string>();
+    world_fn = src_dir + world_fn; IC(task, world_fn);
 
     // Load the world
     gazebo::physics::WorldPtr world = gazebo::loadWorld(world_fn);
@@ -221,6 +247,12 @@ MultiLidars::MultiLidars()
     gt_odom_topic = yml["gt_odom_topic"].as<string>();
     odom_noise = yml["odom_noise"].as<vec_t<double>>();
     hz = yml["lidar_info"]["hz"].as<float>();
+
+    if(task == "shot"){
+        shot_dir = yml["shot_dir"].as<string>();
+        shot_fn = shot_dir + yml["shot_fn"].as<string>();
+        parseTUM(shot_fn, shot_poses); IC(shot_poses.size());
+    }
 
     lidar_num = lidar_topics.size();
 
@@ -254,7 +286,7 @@ MultiLidars::MultiLidars()
     IC();
 }
 
-void MultiLidars::Run()
+void MultiLidars::RecordDataset()
 {
     double start_time = 0.1;
     double tt = start_time;
@@ -290,6 +322,35 @@ void MultiLidars::Run()
     rbag.close();
 }
 
+void MultiLidars::ShotAtPoses()
+{
+    double tt = 0.1;
+    double dur = 1.0 / hz;
+
+    for(auto& T_w_b : shot_poses)
+    {
+        // convert T_w_b to Odometry and save to rbag
+        nav_msgs::Odometry odom = AddNoiseToPose::IgToOdomMsg(T_w_b, tt, "base_link");
+        rbag.write(odom_topic, ros::Time(tt), odom);
+        rbag.write(gt_odom_topic, ros::Time(tt), odom);
+
+        for (int i = 0; i < lidar_num; i++)
+        {
+            auto& ld = glds[i];
+            const auto& T_b_li = igexts[i];
+            // anti-human api, the order reverse from our normal sense
+            auto T_w_li = T_b_li + T_w_b;
+
+            auto hits = ld.getPointCloud(T_w_li, tt);
+            ld.getLidar()->writeToBag(rbag, hits, lidar_topics[i]);
+        }
+
+        tt += dur;
+    }
+
+    rbag.close();
+}
+
 int main(int argc, char **argv)
 {
 
@@ -304,9 +365,16 @@ int main(int argc, char **argv)
     MultiLidars mld;
     cout << timer.toc_string("init") << endl;
 
-    timer.tic("run");    
-    mld.Run();
-    cout << timer.toc_string("run") << endl;
+    timer.tic("task");
+
+    if(task == "record")
+        mld.RecordDataset();
+    else if(task == "shot")
+        mld.ShotAtPoses();
+    else
+        cout << "No such task!!" << endl;
+
+    cout << timer.toc_string("task") << endl;
 
     IC("finished!");
 
