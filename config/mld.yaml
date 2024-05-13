@@ -1,5 +1,5 @@
-# task surppor shot or record
-task: "shot"
+# task surppor shot or record or mkpm
+task: "mkpm"
 
 # world_fn: "/worlds/trees"
 world_fn: "/worlds/room.world"
@@ -41,7 +41,7 @@ lidar_info:
 
     hz: 10
     range: [0.1, 200.0]
-    dist_noise: 0.001
+    dist_noise: 0.01
 
     velo:
         ver_range: [-15, 15]
@@ -58,9 +58,19 @@ lidar_info:
 # out_bag: "/bag/velo.bag"
 out_bag: "/bag/fivelids.bag"
 
-odom_noise: [3, 0.05]
+odom_noise: [0.5, 0.05]
 
-# tum format
-# timestamp x y z q_x q_y q_z q_w
-shot_dir: "/home/rick/chore/obj6dof/pcd/pm/tum"
-shot_fn: "/shot.txt"
+
+shot:
+    # tum format
+    # timestamp x y z q_x q_y q_z q_w
+    shot_dir: "/home/rick/chore/obj6dof/pcd/pm/tum/"
+    shot_fn: "shot.txt"
+
+mkpm:
+    lidar_type: mid360
+    mkpm_dir: "/home/rick/chore/obj6dof/pcd/pm/"
+    mkpm_fn: "tum/mkpm.txt"
+    num_each_loc: 5
+    ds: 0.1
+    save_fn: "../room1.pcd"

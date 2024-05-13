@@ -6,10 +6,8 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /TF1
         - /TF1/Frames1
-        - /PointCloud21/Status1
-        - /odom_path1
+        - /PointCloud23
       Splitter Ratio: 0.45861297845840454
     Tree Height: 549
   - Class: rviz/Selection
@@ -63,14 +61,18 @@ Visualization Manager:
         All Enabled: false
         avia1:
           Value: false
-        base_link:
+        avia2:
           Value: true
-        gt_base_link:
+        avia3:
+          Value: true
+        base_link:
           Value: true
         map:
           Value: true
         velo1:
           Value: false
+        velo2:
+          Value: true
       Marker Scale: 10
       Name: TF
       Show Arrows: true
@@ -79,11 +81,15 @@ Visualization Manager:
       Tree:
         map:
           base_link:
-            {}
-          gt_base_link:
             avia1:
               {}
+            avia2:
+              {}
+            avia3:
+              {}
             velo1:
+              {}
+            velo2:
               {}
       Update Interval: 0
       Value: true
@@ -127,7 +133,7 @@ Visualization Manager:
       Color: 252; 175; 62
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -142,7 +148,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -155,7 +161,7 @@ Visualization Manager:
       Color: 239; 41; 41
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -170,7 +176,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
@@ -260,10 +266,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.329796552658081
+      Pitch: 0.9247969388961792
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.331778526306152
+      Yaw: 0.5399478077888489
     Saved: ~
 Window Geometry:
   Displays:
@@ -281,5 +287,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1267
-  X: 221
-  Y: 93
+  X: 242
+  Y: 116

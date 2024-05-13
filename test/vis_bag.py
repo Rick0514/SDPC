@@ -195,7 +195,7 @@ for topic, msg, t in bag.read_messages(lidar_topics):
 
     rospy.Publisher(topic, PointCloud2, queue_size=5, latch=True).publish(msg)
 
-    time.sleep(0.2)
+    time.sleep(0.4)
 
     if rospy.is_shutdown():
         break

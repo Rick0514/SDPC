@@ -138,7 +138,6 @@ public:
     static std::shared_ptr<LidarBase> create(string type, YAML::Node& yml);
 };
 
-
 class Velodyne : public LidarBase
 {
 private:
@@ -274,7 +273,7 @@ public:
     }
 };
 
-class Avia : public LidarBase
+class Livox : public LidarBase
 {
 
     int samples;
@@ -287,9 +286,9 @@ class Avia : public LidarBase
 
 public:
 
-    Avia(YAML::Node& yml) : LidarBase(yml)
+    Livox(YAML::Node& yml, string sub_name) : LidarBase(yml)
     {
-        this->name = "avia";
+        this->name = sub_name;
 
         auto yyml = yml["livox"];
 
@@ -302,7 +301,7 @@ public:
         convertDataToRotateInfo(datas, aviainfos);
     }
 
-    Avia(sdf::ElementPtr sdf, string scan_dir_) : LidarBase(sdf), scan_dir(scan_dir_)
+    Livox(sdf::ElementPtr sdf, string scan_dir_) : LidarBase(sdf), scan_dir(scan_dir_)
     {
         this->name = "avia";
 
@@ -407,9 +406,11 @@ std::shared_ptr<LidarBase> LidarBase::create(string type, YAML::Node& yml)
 {
     if(type == "velo" || type == "velodyne"){
         return std::make_shared<Velodyne>(yml);
-    }else if(type == "avia"){
-        return std::make_shared<Avia>(yml);
+    }else if(type == "avia" || type == "mid360"){
+        return std::make_shared<Livox>(yml, type);
     }
+
+    return std::shared_ptr<LidarBase>();
 }
 
 } // namespace lidartype

@@ -41,15 +41,15 @@ include_directories(
     ${GAZEBO_INCLUDE_DIRS}
 )
 
-add_library(sdpc SHARED src/distortpc.cpp)
-target_include_directories(sdpc PRIVATE
-    ${PCL_INCLUDE_DIRS}
-)
-target_link_libraries(sdpc 
-    ${catkin_LIBRARIES} 
-    ${GAZEBO_LIBRARIES}
-    ${PCL_LIBRARIES}
-)
+# add_library(sdpc SHARED src/distortpc.cpp)
+# target_include_directories(sdpc PRIVATE
+#     ${PCL_INCLUDE_DIRS}
+# )
+# target_link_libraries(sdpc 
+#     ${catkin_LIBRARIES} 
+#     ${GAZEBO_LIBRARIES}
+#     ${PCL_LIBRARIES}
+# )
 
 
 add_executable(mld src/mld.cpp)

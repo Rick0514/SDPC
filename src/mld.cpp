@@ -6,6 +6,7 @@
 #include <icecream.hpp>
 #include <yaml-cpp/yaml.h>
 #include <tictoc.hpp>
+#include <pcp.hpp>
 
 #include <rosbag/bag.h>
 #include <nav_msgs/Odometry.h>
@@ -182,6 +183,8 @@ public:
 
     void ShotAtPoses();
 
+    void MakePriorMap();
+
     static void parseTUM(const string& fn, vec_t<IP6d>& poses)
     {
         std::ifstream inf(fn);
@@ -227,6 +230,11 @@ protected:
     string shot_dir, shot_fn;
     vec_t<IP6d> shot_poses;
 
+    GzLidar* mkpm_lidar;
+    string mkpm_dir, mkpm_fn, save_fn;
+    int num_each_loc;
+    float mkpm_ds;
+
 };
 
 MultiLidars::MultiLidars()
@@ -248,12 +256,6 @@ MultiLidars::MultiLidars()
     odom_noise = yml["odom_noise"].as<vec_t<double>>();
     hz = yml["lidar_info"]["hz"].as<float>();
 
-    if(task == "shot"){
-        shot_dir = yml["shot_dir"].as<string>();
-        shot_fn = shot_dir + yml["shot_fn"].as<string>();
-        parseTUM(shot_fn, shot_poses); IC(shot_poses.size());
-    }
-
     lidar_num = lidar_topics.size();
 
     string bag_fn = src_dir + yml["out_bag"].as<string>();  IC(bag_fn);
@@ -268,6 +270,25 @@ MultiLidars::MultiLidars()
 
     for(auto& t : lidar_types){
         glds.push_back(GzLidar(world, t, yml));
+    }
+
+    if(task == "shot"){
+        shot_dir = yml["shot"]["shot_dir"].as<string>();
+        shot_fn = shot_dir + yml["shot"]["shot_fn"].as<string>();
+        parseTUM(shot_fn, shot_poses); IC(shot_poses.size());
+    }
+
+    if(task == "mkpm"){
+        IC();
+        mkpm_dir = yml["mkpm"]["mkpm_dir"].as<string>();
+        mkpm_fn = mkpm_dir + yml["mkpm"]["mkpm_fn"].as<string>();
+        save_fn = mkpm_dir + yml["mkpm"]["save_fn"].as<string>();
+        string mkpm_ld_type = yml["mkpm"]["lidar_type"].as<string>();
+        num_each_loc = yml["mkpm"]["num_each_loc"].as<int>();
+
+        IC(mkpm_fn, num_each_loc, mkpm_ld_type);
+        mkpm_ds = yml["mkpm"]["ds"].as<float>();
+        mkpm_lidar = new GzLidar(world, mkpm_ld_type, yml);
     }
 
     IC();
@@ -329,9 +350,10 @@ void MultiLidars::ShotAtPoses()
 
     for(auto& T_w_b : shot_poses)
     {
-        // convert T_w_b to Odometry and save to rbag
         nav_msgs::Odometry odom = AddNoiseToPose::IgToOdomMsg(T_w_b, tt, "base_link");
         rbag.write(odom_topic, ros::Time(tt), odom);
+
+        odom = AddNoiseToPose::IgToOdomMsg(T_w_b, tt, "base_link");
         rbag.write(gt_odom_topic, ros::Time(tt), odom);
 
         for (int i = 0; i < lidar_num; i++)
@@ -349,6 +371,37 @@ void MultiLidars::ShotAtPoses()
     }
 
     rbag.close();
+}
+
+void MultiLidars::MakePriorMap()
+{
+    vec_t<IP6d> poses;
+    parseTUM(mkpm_fn, poses);
+
+    pc_ptr gmap = pcl::make_shared<pc_t>();
+    VoxelDownSample vds(mkpm_ds);
+    for(auto& T_w_b : poses)
+    {
+        pc_t pc;
+        for (int i = 0; i < num_each_loc; i++)
+        {
+            auto hits = mkpm_lidar->getPointCloud(T_w_b, 0);
+            for(const auto& p : hits){
+                auto pp = p.pc[0]; 
+                pt_t pt;
+                pt.intensity = 100.0;
+                pp = T_w_b.Rot() * pp + T_w_b.Pos();
+                pt.x = pp.X();
+                pt.y = pp.Y();
+                pt.z = pp.Z();
+                pc.emplace_back(std::move(pt));
+            }
+        }
+        vds.filter<pt_t>(gmap, gmap);
+        *gmap += pc;
+    }
+    vds.filter<pt_t>(gmap, gmap);
+    savePCD(save_fn, *gmap); IC(save_fn, gmap->size());
 }
 
 int main(int argc, char **argv)
@@ -371,6 +424,8 @@ int main(int argc, char **argv)
         mld.RecordDataset();
     else if(task == "shot")
         mld.ShotAtPoses();
+    else if(task == "mkpm")
+        mld.MakePriorMap();
     else
         cout << "No such task!!" << endl;
 
