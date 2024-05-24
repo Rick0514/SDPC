@@ -110,15 +110,15 @@ public:
         out_->reserve(_map.size());
 
         for(const auto& [_, vb] : _map){
-            // pcl::CentroidPoint<PointType> centroid;
+            pcl::CentroidPoint<PointType> centroid;
 
-            // // fill in the accumulator with leaf points
-            // for (auto&& idx : vb)
-            //     centroid.add(cloud->points[idx]);  
+            // fill in the accumulator with leaf points
+            for (auto&& idx : vb)
+                centroid.add(cloud->points[idx]);  
             
-            // PointType pt;
-            // centroid.get(pt);
-            PointType pt = cloud->points[vb.front()];
+            PointType pt;
+            centroid.get(pt);
+            // PointType pt = cloud->points[vb.front()];
             out_->emplace_back(pt);
         }
 

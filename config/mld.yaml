@@ -1,8 +1,8 @@
 # task surppor shot or record or mkpm
 task: "mkpm"
 
-# world_fn: "/worlds/trees"
-world_fn: "/worlds/room.world"
+world_fn: "/worlds/trees"
+# world_fn: "/worlds/room.world"
 
 # velo/avia/mid360
 # lidar_types: ["velo", "avia", "avia"]
@@ -70,7 +70,14 @@ shot:
 mkpm:
     lidar_type: mid360
     mkpm_dir: "/home/rick/chore/obj6dof/pcd/pm/"
-    mkpm_fn: "tum/mkpm.txt"
+    # mkpm_fn: "tum/mkpm.txt"
+    mkpm_fn: "tum/origin.txt"
     num_each_loc: 5
     ds: 0.1
-    save_fn: "../room1.pcd"
+    save_fn: "../tree_rgb.pcd"
+
+    stain:
+        enable: true
+        pos: [0, 0, 0.9]
+        text_size: 1024
+

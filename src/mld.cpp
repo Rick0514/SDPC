@@ -1,6 +1,7 @@
 #include <gazebo/gazebo.hh>
 #include <gazebo/common/common.hh>
 #include <gazebo/physics/physics.hh>
+#include <gazebo/rendering/RenderingIface.hh>
 
 #include <basic.hpp>
 #include <icecream.hpp>
@@ -13,13 +14,16 @@
 
 #include <sixdofcubicspline.hpp>
 #include <lidartype.hpp>
+#include <cubemap.hpp>
 
 using std::string;
 using std::cout;
 using std::endl;
 
-string src_dir = "";
-string task = "record";
+string g_world_name;
+string g_src_dir = "";
+string g_task = "record";
+YAML::Node g_yml;
 
 using namespace gazebo;
 using IV3d = ignition::math::Vector3d;
@@ -93,12 +97,12 @@ protected:
 class GzLidar
 {
 public:
-    GzLidar(physics::WorldPtr& w, string type, YAML::Node& yml){
+    GzLidar(physics::WorldPtr& w, string type){
         rays = boost::dynamic_pointer_cast<gazebo::physics::MultiRayShape>(
                 w->Physics()->CreateShape("multiray",
                 gazebo::physics::CollisionPtr()));
 
-        auto yyml = yml["lidar_info"];
+        auto yyml = g_yml["lidar_info"];
         IC(yyml["livox"]["scan_dir"].as<string>());
 
         ld = lidartype::LidarBase::create(type, yyml);
@@ -177,7 +181,7 @@ class MultiLidars
 {
 public:
 
-    MultiLidars();    
+    MultiLidars(rendering::ScenePtr scene_);    
     
     void RecordDataset();
 
@@ -235,66 +239,66 @@ protected:
     int num_each_loc;
     float mkpm_ds;
 
+    bool stain_en;
+    IV3d stain_pos;
+
+    rendering::ScenePtr scene;
 };
 
-MultiLidars::MultiLidars()
+MultiLidars::MultiLidars(rendering::ScenePtr scene_) : scene(scene_)
 {
-    std::ifstream inf(src_dir + "/config/mld.yaml");
-    auto yml = YAML::Load(inf);
+    physics::WorldPtr world = physics::get_world(g_world_name);
 
-    world_fn = yml["world_fn"].as<string>();
-    task = yml["task"].as<string>();
-    world_fn = src_dir + world_fn; IC(task, world_fn);
-
-    // Load the world
-    gazebo::physics::WorldPtr world = gazebo::loadWorld(world_fn);
-
-    lidar_types = yml["lidar_types"].as<vec_t<string>>();
-    lidar_topics = yml["lidar_topics"].as<vec_t<string>>();
-    odom_topic = yml["odom_topic"].as<string>();
-    gt_odom_topic = yml["gt_odom_topic"].as<string>();
-    odom_noise = yml["odom_noise"].as<vec_t<double>>();
-    hz = yml["lidar_info"]["hz"].as<float>();
+    lidar_types = g_yml["lidar_types"].as<vec_t<string>>(); IC(lidar_types);
+    lidar_topics = g_yml["lidar_topics"].as<vec_t<string>>(); IC(lidar_topics);
+    odom_topic = g_yml["odom_topic"].as<string>(); IC(odom_topic);
+    gt_odom_topic = g_yml["gt_odom_topic"].as<string>(); IC(gt_odom_topic);
+    odom_noise = g_yml["odom_noise"].as<vec_t<double>>(); IC(odom_noise);
+    hz = g_yml["lidar_info"]["hz"].as<float>();
 
     lidar_num = lidar_topics.size();
 
-    string bag_fn = src_dir + yml["out_bag"].as<string>();  IC(bag_fn);
+    string bag_fn = g_src_dir + g_yml["out_bag"].as<string>();  IC(bag_fn);
     rbag.open(bag_fn, rosbag::bagmode::Write);
 
-    yml["lidar_info"]["livox"]["scan_dir"] = src_dir + yml["lidar_info"]["livox"]["scan_dir"].as<string>();
+    g_yml["lidar_info"]["livox"]["scan_dir"] = g_src_dir + g_yml["lidar_info"]["livox"]["scan_dir"].as<string>();
 
     // for path
-    path_fn = src_dir + yml["path"]["path_fn"].as<string>();
-    total_time = yml["path"]["total_time"].as<double>();
+    path_fn = g_src_dir + g_yml["path"]["path_fn"].as<string>();
+    total_time = g_yml["path"]["total_time"].as<double>();
     sixsp = new SixDofCubicSpline(total_time, path_fn);
 
     for(auto& t : lidar_types){
-        glds.push_back(GzLidar(world, t, yml));
+        glds.push_back(GzLidar(world, t));
     }
 
-    if(task == "shot"){
-        shot_dir = yml["shot"]["shot_dir"].as<string>();
-        shot_fn = shot_dir + yml["shot"]["shot_fn"].as<string>();
+    if(g_task == "shot"){
+        shot_dir = g_yml["shot"]["shot_dir"].as<string>();
+        shot_fn = shot_dir + g_yml["shot"]["shot_fn"].as<string>();
         parseTUM(shot_fn, shot_poses); IC(shot_poses.size());
     }
 
-    if(task == "mkpm"){
+    if(g_task == "mkpm"){
         IC();
-        mkpm_dir = yml["mkpm"]["mkpm_dir"].as<string>();
-        mkpm_fn = mkpm_dir + yml["mkpm"]["mkpm_fn"].as<string>();
-        save_fn = mkpm_dir + yml["mkpm"]["save_fn"].as<string>();
-        string mkpm_ld_type = yml["mkpm"]["lidar_type"].as<string>();
-        num_each_loc = yml["mkpm"]["num_each_loc"].as<int>();
+        mkpm_dir = g_yml["mkpm"]["mkpm_dir"].as<string>();
+        mkpm_fn = mkpm_dir + g_yml["mkpm"]["mkpm_fn"].as<string>();
+        save_fn = mkpm_dir + g_yml["mkpm"]["save_fn"].as<string>();
+        string mkpm_ld_type = g_yml["mkpm"]["lidar_type"].as<string>();
+        num_each_loc = g_yml["mkpm"]["num_each_loc"].as<int>();
 
         IC(mkpm_fn, num_each_loc, mkpm_ld_type);
-        mkpm_ds = yml["mkpm"]["ds"].as<float>();
-        mkpm_lidar = new GzLidar(world, mkpm_ld_type, yml);
+        mkpm_ds = g_yml["mkpm"]["ds"].as<float>();
+        mkpm_lidar = new GzLidar(world, mkpm_ld_type);
+
+        stain_en = g_yml["mkpm"]["stain"]["enable"].as<bool>();
+        auto stain_vec = g_yml["mkpm"]["stain"]["pos"].as<vector<double>>();
+        stain_pos = IV3d(stain_vec[0], stain_vec[1], stain_vec[2]);
     }
 
     IC();
 
     // for exts
-    auto exts = yml["exts"].as<vector<float>>(); IC(exts);
+    auto exts = g_yml["exts"].as<vector<float>>(); IC(exts);
     assert(exts.size() == 7 * lidar_num);
 
     for(int i=0; i<lidar_num; i++){
@@ -397,39 +401,65 @@ void MultiLidars::MakePriorMap()
                 pc.emplace_back(std::move(pt));
             }
         }
-        vds.filter<pt_t>(gmap, gmap);
+        // vds.filter<pt_t>(gmap, gmap);
         *gmap += pc;
     }
     vds.filter<pt_t>(gmap, gmap);
-    savePCD(save_fn, *gmap); IC(save_fn, gmap->size());
+
+    if(!stain_en){
+        savePCD(save_fn, *gmap); IC(save_fn, gmap->size());
+    }else{
+        int text_size = g_yml["mkpm"]["stain"]["text_size"].as<int>();
+        cubemap::CubeMap cm(scene, text_size);
+        cm.SetPos(stain_pos);
+        cm.GetCubeMap();
+        pcrgb_t::Ptr pc_rgb = cm.StainPC<pt_t>(gmap);
+        savePCD(save_fn, *pc_rgb); IC(save_fn, pc_rgb->size());
+    }
 }
 
 int main(int argc, char **argv)
 {
 
 #ifdef ROOT_DIR
-    src_dir = ROOT_DIR;
+    g_src_dir = ROOT_DIR;
 #endif
 
     Common_tools::Timer timer;
+    gazebo::common::Console::SetQuiet(false);
     
+    std::ifstream inf(g_src_dir + "/config/mld.yaml");
+    g_yml = YAML::Load(inf);
+
     timer.tic("init");
     gazebo::setupServer(argc, argv);
-    MultiLidars mld;
+    string world_fn = g_yml["world_fn"].as<string>();
+    g_task = g_yml["task"].as<string>();
+    world_fn = g_src_dir + world_fn; IC(g_task, world_fn);
+    // Load the world
+    gazebo::physics::WorldPtr world = gazebo::loadWorld(world_fn);
+    g_world_name = world->Name();
+    gazebo::rendering::ScenePtr scene = gazebo::rendering::create_scene(g_world_name, false, true);
+    for(int i=0; i<5; i++){
+        event::Events::preRender();
+        gazebo::runWorld(world, 100);
+    }
     cout << timer.toc_string("init") << endl;
 
-    timer.tic("task");
+    MultiLidars mld(scene);
 
-    if(task == "record")
+    timer.tic("g_task");
+
+    if(g_task == "record")
         mld.RecordDataset();
-    else if(task == "shot")
+    else if(g_task == "shot")
         mld.ShotAtPoses();
-    else if(task == "mkpm")
+    else if(g_task == "mkpm")
         mld.MakePriorMap();
     else
-        cout << "No such task!!" << endl;
+        cout << "No such g_task!!" << endl;
 
-    cout << timer.toc_string("task") << endl;
+    cout << timer.toc_string("g_task") << endl;
 
     IC("finished!");
 

@@ -15,6 +15,7 @@ find_package(gazebo REQUIRED)
 find_package(PCL REQUIRED)
 find_package(GTest REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(OpenCV REQUIRED)
 # find_package(Boost REQUIRED COMPONENTS
 #     filesystem
 # )
@@ -55,13 +56,11 @@ include_directories(
 add_executable(mld src/mld.cpp)
 target_include_directories(mld PRIVATE
     ${PCL_INCLUDE_DIRS}
-    ${GTEST_INCLUDE_DIRS}
 )
 target_link_libraries(mld
-    ${GTEST_LIBRARIES}
     ${catkin_LIBRARIES}
-    gazebo_test_fixture
     ${GAZEBO_LIBRARIES}
+    gazebo_rendering
     ${PCL_LIBRARIES}
     yaml-cpp
 )
@@ -82,3 +81,13 @@ target_link_libraries(_test_mld
 target_compile_definitions(_test_mld PUBLIC -DROOT_DIR=\"${CMAKE_SOURCE_DIR}\")
 
 add_subdirectory(test)
+
+add_executable(_test_cam src/_test_cam.cpp)
+target_include_directories(_test_cam PRIVATE
+    ${PCL_INCLUDE_DIRS}
+)
+target_link_libraries(_test_cam
+    ${catkin_LIBRARIES}
+    ${GAZEBO_LIBRARIES}
+    yaml-cpp
+)

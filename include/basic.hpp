@@ -15,6 +15,9 @@ using pn_t = pcl::PointXYZINormal;
 using pc_t = pcl::PointCloud<pt_t>;
 using pc_ptr = pc_t::Ptr;
 
+using prgb_t = pcl::PointXYZRGB;
+using pcrgb_t = pcl::PointCloud<prgb_t>;
+
 template <typename T>
 using pc_t_ = pcl::PointCloud<T>;
 
