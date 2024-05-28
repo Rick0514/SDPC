@@ -91,3 +91,17 @@ target_link_libraries(_test_cam
     ${GAZEBO_LIBRARIES}
     yaml-cpp
 )
+
+add_executable(_test_stain src/_test_stain.cpp)
+target_include_directories(_test_stain PRIVATE
+    ${OpenCV_INCLUDE_DIRS}
+    ${PCL_INCLUDE_DIRS}
+)
+target_link_libraries(_test_stain
+    ${catkin_LIBRARIES}
+    ${GAZEBO_LIBRARIES}
+    gazebo_rendering
+    ${PCL_LIBRARIES}
+    ${OpenCV_LIBS}
+    yaml-cpp
+)

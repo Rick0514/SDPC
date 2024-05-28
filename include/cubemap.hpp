@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include "basic.hpp"
 
 #include "gazebo/gazebo.hh"
@@ -8,6 +9,7 @@
 #include "gazebo/rendering/Camera.hh"
 #include "gazebo/rendering/Conversions.hh"
 
+using std::string;
 using namespace gazebo;
 
 namespace cubemap
@@ -24,12 +26,18 @@ public:
 
     CubeMap(rendering::ScenePtr scene_, int text_size_) : scene(scene_), text_size(text_size_)
     {
+        static int _class_cnt;
         cubes.resize(6);
 
         sdf::ElementPtr cameraSDF(new sdf::Element);
-        sdf::initFile("camera.sdf", cameraSDF); 
+        sdf::initFile("camera.sdf", cameraSDF);
+
+        string cam_name_prefix = string("cubecam") + std::to_string(_class_cnt) + "_";
+        string rt_name_prefix = string("rt") + std::to_string(_class_cnt) + "_";   
+        _class_cnt++;
+
         for(int i=0; i<6; i++){
-            cubes[i] = scene->CreateCamera("cube_map_" + std::to_string(i), false);
+            cubes[i] = scene->CreateCamera(cam_name_prefix + std::to_string(i), false);
             cubes[i]->Load(cameraSDF);
             cubes[i]->Init();
 
@@ -40,12 +48,14 @@ public:
             cubes[i]->SetHFOV(static_cast<ignition::math::Angle>(IGN_DTOR(95)));
             cubes[i]->SetAspectRatio(1.0);
             cubes[i]->SetClipDist(0.1, 200);
-            cubes[i]->CreateRenderTexture("CubeMap_" + std::to_string(i));
+            cubes[i]->CreateRenderTexture(rt_name_prefix + std::to_string(i));
         }
     }
 
     void SetPos(const IV3d& pos_)
     {
+        cube_pos = pos_;
+
         IP6d pose;
         std::vector<IV3d> rot{
             IV3d(0, 0, 0),
@@ -63,6 +73,8 @@ public:
         }
     }
 
+    IV3d GetPos() const {   return cube_pos;    }
+
     void GetCubeMap()
     {
         for(int i=0; i<6; i++){
@@ -77,7 +89,7 @@ public:
     {
         IV3d scr;
         auto pos = cam->OgreCamera()->getProjectionMatrix() *
-                cam->OgreCamera()->getViewMatrix() *
+                cam->OgreCamera()->getViewMatrix() *    //rendering::Conversions::Convert(pt);
                 Ogre::Vector4(rendering::Conversions::Convert(pt));
 
         pos.x /= pos.w;
@@ -143,6 +155,8 @@ protected:
     rendering::ScenePtr scene;
     std::vector<rendering::CameraPtr> cubes;
     int text_size;
+
+    IV3d cube_pos;
 
 };
 

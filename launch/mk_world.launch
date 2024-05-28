@@ -3,6 +3,8 @@
     <!-- 将 Urdf 文件的内容加载到参数服务器 -->
     <env name="GAZEBO_PLUGIN_PATH" value="$(env HOME)/.gazebo/plugins"/>
     <!-- 启动 gazebo -->
+    <!-- <arg name="world_name" default="onemodel" /> -->
+    <!-- <arg name="world_name" default="pinetree" /> -->
     <arg name="world_name" default="trees" />
     <!-- <arg name="world_name" default="shape" /> -->
     <!-- <arg name="world_name" default="room.world" /> -->

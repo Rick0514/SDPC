@@ -10,6 +10,7 @@ world_fn: "/worlds/trees"
 # lidar_types: ["velo", "avia"]
 # lidar_topics: ["velo1", "avia1"]
 
+cam_yml: "/config/cams.yaml"
 # make 5 lidar datasets
 lidar_types: ["avia", "avia", "velo", "velo", "avia"]
 lidar_topics: ["avia1", "avia2", "velo1", "velo2", "avia3"]
@@ -78,6 +79,6 @@ mkpm:
 
     stain:
         enable: true
-        pos: [0, 0, 0.9]
-        text_size: 1024
+        text_size: 720
+        cm_fn: "tum/cmtree.txt"
 

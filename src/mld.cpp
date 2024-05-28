@@ -15,6 +15,7 @@
 #include <sixdofcubicspline.hpp>
 #include <lidartype.hpp>
 #include <cubemap.hpp>
+#include <camera.hpp>
 
 using std::string;
 using std::cout;
@@ -240,7 +241,9 @@ protected:
     float mkpm_ds;
 
     bool stain_en;
-    IV3d stain_pos;
+    vec_t<IP6d> stain_pos;
+
+    string cam_fn;
 
     rendering::ScenePtr scene;
 };
@@ -268,6 +271,10 @@ MultiLidars::MultiLidars(rendering::ScenePtr scene_) : scene(scene_)
     total_time = g_yml["path"]["total_time"].as<double>();
     sixsp = new SixDofCubicSpline(total_time, path_fn);
 
+    if(g_yml["cam_yml"].IsDefined()){
+        cam_fn = g_src_dir + g_yml["cam_yml"].as<string>();
+    }
+
     for(auto& t : lidar_types){
         glds.push_back(GzLidar(world, t));
     }
@@ -291,8 +298,8 @@ MultiLidars::MultiLidars(rendering::ScenePtr scene_) : scene(scene_)
         mkpm_lidar = new GzLidar(world, mkpm_ld_type);
 
         stain_en = g_yml["mkpm"]["stain"]["enable"].as<bool>();
-        auto stain_vec = g_yml["mkpm"]["stain"]["pos"].as<vector<double>>();
-        stain_pos = IV3d(stain_vec[0], stain_vec[1], stain_vec[2]);
+        string cm_fn = mkpm_dir + g_yml["mkpm"]["stain"]["cm_fn"].as<string>();
+        parseTUM(cm_fn, stain_pos);
     }
 
     IC();
@@ -342,6 +349,37 @@ void MultiLidars::RecordDataset()
             ld.getLidar()->writeToBag(rbag, hits, lidar_topics[i]);
         }
         tt += dur;
+    }
+
+
+    if(cam_fn.size()){
+        // need to record image data
+        tt = start_time;
+        auto cam_yml = YAML::LoadFile(cam_fn);
+        auto cam_hz = cam_yml["hz"].as<int>();
+        dur = 1.0 / cam_hz;
+
+        // init some cams
+        vec_t<camera::OneCam> cams;
+        for(int i=0; i<5; i++)  // we assume 5 cams is the max
+        {
+            string cam_name = "cam" + std::to_string(i);
+            if(!cam_yml[cam_name].IsDefined())  break;
+
+            auto cyml = cam_yml[cam_name];
+            cams.push_back(camera::OneCam(scene, cyml));
+        }
+
+        while(tt < total_time){
+            auto T_w_b = sixsp->getPose(tt);
+
+            for(auto& cam : cams){
+                cam.SetPos(T_w_b);
+                cam.WriteToBag(rbag, tt, cam.GetCamName());
+            }
+
+            tt += dur;
+        }
     }
 
     rbag.close();
@@ -410,10 +448,42 @@ void MultiLidars::MakePriorMap()
         savePCD(save_fn, *gmap); IC(save_fn, gmap->size());
     }else{
         int text_size = g_yml["mkpm"]["stain"]["text_size"].as<int>();
-        cubemap::CubeMap cm(scene, text_size);
-        cm.SetPos(stain_pos);
-        cm.GetCubeMap();
-        pcrgb_t::Ptr pc_rgb = cm.StainPC<pt_t>(gmap);
+
+        vector<cubemap::CubeMap> cms;
+        for(const auto& po : stain_pos){
+            cubemap::CubeMap cm(scene, text_size);
+            cm.SetPos(po.Pos());
+            cm.GetCubeMap();
+            cms.push_back(cm);
+        }
+
+        pcrgb_t::Ptr pc_rgb(new pcrgb_t);
+        pc_rgb->resize(gmap->size());
+        for(int i=0; i<gmap->size(); i++)
+        {
+            auto& pt = gmap->points[i];
+            auto& prgb = pc_rgb->points[i];
+            
+            vector<double> dist;
+            IV3d igpt(pt.x, pt.y, pt.z);
+            for(const auto& c : cms){
+                dist.push_back((igpt - c.GetPos()).Length());
+            }
+
+            // get the min idx of dist
+            auto min_it = std::min_element(dist.begin(), dist.end());
+            int min_idx = std::distance(dist.begin(), min_it);
+
+            auto& chosen_cm = cms[min_idx];
+            auto rgb = chosen_cm.GetRGB(IV3d(pt.x, pt.y, pt.z));
+            prgb.x = pt.x;
+            prgb.y = pt.y;
+            prgb.z = pt.z;
+            prgb.r = rgb.X();
+            prgb.g = rgb.Y();
+            prgb.b = rgb.Z();
+        }
+
         savePCD(save_fn, *pc_rgb); IC(save_fn, pc_rgb->size());
     }
 }

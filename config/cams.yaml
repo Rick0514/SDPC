@@ -1,0 +1,8 @@
+hz: 10
+
+cam0:
+    ext: []     # to base, xyzw-xyz
+    hfov: 70
+
+    hw: []      # height and width
+    noise: []   # mean and std
