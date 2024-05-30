@@ -5,8 +5,11 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
+#include <random>
+
 using Pose6 = Eigen::Isometry3d;
 using V3 = Eigen::Vector3d;
+using M3 = Eigen::Matrix3d;
 using Qd = Eigen::Quaterniond;
 using plane_t = Eigen::Vector4d;
 
@@ -40,14 +43,24 @@ class GenNoise
 {
 protected:
     
-    std::random_device rd{};
-    std::mt19937 gen{rd()};
+    // https://stackoverflow.com/questions/71624001/deleted-function-error-after-using-random-lib-in-struct
+    std::mt19937 gen;
 
 public:
+
+    GenNoise(){
+        gen = std::mt19937(std::random_device{}());
+    }
 
     double getNoise(double std)
     {
         std::normal_distribution<double> d(0.0, std);
+        return d(gen);
+    }
+
+    double getNoise(double mu, double std)
+    {
+        std::normal_distribution<double> d(mu, std);
         return d(gen);
     }
 };

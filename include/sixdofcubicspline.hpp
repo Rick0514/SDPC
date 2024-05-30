@@ -133,6 +133,7 @@ public:
         return IV3d(v[0], v[1], v[2]);
     }
 
+    // https://github.com/rpng/lips/blob/master/lips_matlab/matlab/functions/lips/euler2angular.m
     IV3d getOmega(double t)
     {
         if(t < still_time)  return IV3d::Zero;
@@ -155,7 +156,48 @@ public:
         
         IV3d om_inG = J * IV3d(dr, dp, dy);
         return om_inG;
+    }
 
+    IV3d getAlpha(double t)
+    {
+        if(t < still_time)  return IV3d::Zero;
+
+        auto pose = getPose(t);
+
+        double roll = pose.Rot().Roll();
+        double pitch = pose.Rot().Pitch();
+        double yaw = pose.Rot().Yaw();
+
+        auto cr = cos(roll);
+        auto sr = sin(roll);
+        auto cp = cos(pitch);
+        auto sp = sin(pitch);
+        auto cy = cos(yaw);
+        auto sy = sin(yaw);
+        
+        double dr = sps[3].deriv(1, t);
+        double dp = sps[4].deriv(1, t);
+        double dy = sps[5].deriv(1, t);
+        double ddr = sps[3].deriv(2, t);
+        double ddp = sps[4].deriv(2, t);
+        double ddy = sps[5].deriv(2, t);
+
+        // dot(w) = J * dot(rpy)
+        ignition::math::Matrix3d J(
+            cy*cp, -sy, 0,
+            sy*cp, cy, 0,
+            -sp, 0, 1
+        );
+
+        // ddot(w) = dJ * dot(rpy) + J * ddot(rpy)
+        ignition::math::Matrix3d dJ(
+            -sy*cp*dy-sp*cy*dp, -cy*dy, 0,
+            cy*cp*dy-sp*sy*dp, -sy*dy, 0,
+            -cp*dp, 0, 0
+        );
+        
+        IV3d al_inG = dJ * IV3d(ddr, ddp, ddy) + J * IV3d(dr, dp, dy);
+        return al_inG;
     }
 };
 

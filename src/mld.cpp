@@ -16,6 +16,11 @@
 #include <lidartype.hpp>
 #include <cubemap.hpp>
 #include <camera.hpp>
+#include <imu.hpp>
+
+INIT_IMU_CLASS;
+INIT_CAMERA_CLASS;
+INIT_CUBEMAP_CLASS;
 
 using std::string;
 using std::cout;
@@ -42,6 +47,12 @@ public:
         // set ang_noise and trans_noise
         ang_noise = ang_;
         trans_noise = trans_;
+    }
+
+    double getNoise(double mu, double std)
+    {
+        std::normal_distribution<double> d(mu, std);
+        return d(gen);
     }
 
     double getNoise(double std)
@@ -243,7 +254,7 @@ protected:
     bool stain_en;
     vec_t<IP6d> stain_pos;
 
-    string cam_fn;
+    string cam_fn, imu_fn;
 
     rendering::ScenePtr scene;
 };
@@ -272,7 +283,11 @@ MultiLidars::MultiLidars(rendering::ScenePtr scene_) : scene(scene_)
     sixsp = new SixDofCubicSpline(total_time, path_fn);
 
     if(g_yml["cam_yml"].IsDefined()){
-        cam_fn = g_src_dir + g_yml["cam_yml"].as<string>();
+        cam_fn = g_src_dir + g_yml["cam_yml"].as<string>(); IC(cam_fn);
+    }
+
+    if(g_yml["imu_yml"].IsDefined()){
+        imu_fn = g_src_dir + g_yml["imu_yml"].as<string>(); IC(imu_fn);
     }
 
     for(auto& t : lidar_types){
@@ -376,6 +391,51 @@ void MultiLidars::RecordDataset()
             for(auto& cam : cams){
                 cam.SetPos(T_w_b);
                 cam.WriteToBag(rbag, tt, cam.GetCamName());
+            }
+
+            tt += dur;
+        }
+    }
+
+    if(imu_fn.size())
+    {
+        // need to record imu data
+        tt = start_time;
+        auto imu_yml = YAML::LoadFile(imu_fn);
+        auto imu_hz = imu_yml["hz"].as<int>();
+        dur = 1.0 / imu_hz;
+        IC(dur, imu_hz);
+
+        // init imu static member
+        imu::Imu::imu_hz = imu_hz;
+        auto grav_vec = imu_yml["grav"].as<vec_t<float>>();
+        imu::Imu::grav = IV3d(grav_vec[0], grav_vec[1], grav_vec[2]);
+
+        vec_t<imu::Imu> imus;
+        for(int i=0; i<5; i++)
+        {
+            string imu_name = "imu" + std::to_string(i);
+            if(!imu_yml[imu_name].IsDefined())  break;
+
+            auto iyml = imu_yml[imu_name];
+            imus.push_back(imu::Imu(iyml));
+        }
+
+        IC(imus.size());
+        
+        while(tt < total_time)
+        {
+            // get the pose
+            auto Twb = sixsp->getPose(tt);
+            auto v = sixsp->getV(tt);
+            auto dv = sixsp->getA(tt);
+            auto w = sixsp->getOmega(tt);
+            auto dw = sixsp->getAlpha(tt);
+
+            for(auto& imu : imus)
+            {
+                imu.FromBaseKin(Twb, v, dv, w, dw);
+                imu.WriteToBag(rbag, tt, imu.GetImuName());
             }
 
             tt += dur;

@@ -10,3 +10,10 @@ target_link_libraries(vis_bag
     ${PCL_LIBRARIES}
     yaml-cpp
 )
+
+add_executable(check_imu check_imu.cpp)
+target_link_libraries(check_imu 
+    ${catkin_LIBRARIES}
+    ${PCL_LIBRARIES}
+    yaml-cpp
+)

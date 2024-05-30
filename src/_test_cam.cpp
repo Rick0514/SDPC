@@ -3,7 +3,6 @@
 #include <gazebo/physics/physics.hh>
 #include <gazebo/rendering/Scene.hh>
 #include <gazebo/rendering/RenderingIface.hh>
-#include <cubemap.hpp>
 
 #include <basic.hpp>
 #include <icecream.hpp>
@@ -12,6 +11,9 @@
 #include <pcp.hpp>
 
 #include <ros/package.h>
+
+#include <cubemap.hpp>
+INIT_CUBEMAP_CLASS;
 
 using std::string;
 using std::cout;

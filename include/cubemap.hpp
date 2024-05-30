@@ -20,13 +20,16 @@ using IV3d = ignition::math::Vector3d;
 using IQd = ignition::math::Quaterniond;
 using IP6d = ignition::math::Pose3d;
 
+#define INIT_CUBEMAP_CLASS          \
+int cubemap::CubeMap::_class_cnt = 0;   \
+
 class CubeMap
 {
 public:
-
+    static int _class_cnt;
+    
     CubeMap(rendering::ScenePtr scene_, int text_size_) : scene(scene_), text_size(text_size_)
     {
-        static int _class_cnt;
         cubes.resize(6);
 
         sdf::ElementPtr cameraSDF(new sdf::Element);

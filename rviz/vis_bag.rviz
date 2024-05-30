@@ -7,7 +7,6 @@ Panels:
         - /Global Options1
         - /Status1
         - /TF1/Frames1
-        - /PointCloud23
       Splitter Ratio: 0.45861297845840454
     Tree Height: 549
   - Class: rviz/Selection
@@ -61,17 +60,11 @@ Visualization Manager:
         All Enabled: false
         avia1:
           Value: false
-        avia2:
-          Value: true
-        avia3:
-          Value: true
         base_link:
           Value: true
-        map:
+        gt_base_link:
           Value: true
-        velo1:
-          Value: false
-        velo2:
+        map:
           Value: true
       Marker Scale: 10
       Name: TF
@@ -81,15 +74,9 @@ Visualization Manager:
       Tree:
         map:
           base_link:
+            {}
+          gt_base_link:
             avia1:
-              {}
-            avia2:
-              {}
-            avia3:
-              {}
-            velo1:
-              {}
-            velo2:
               {}
       Update Interval: 0
       Value: true
@@ -133,7 +120,7 @@ Visualization Manager:
       Color: 252; 175; 62
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -148,7 +135,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -161,7 +148,7 @@ Visualization Manager:
       Color: 239; 41; 41
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -176,7 +163,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
@@ -251,7 +238,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 42.837589263916016
+      Distance: 60.18373107910156
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -266,10 +253,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9247969388961792
+      Pitch: 1.0147968530654907
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.5399478077888489
+      Yaw: 1.2199472188949585
     Saved: ~
 Window Geometry:
   Displays:
@@ -288,4 +275,4 @@ Window Geometry:
     collapsed: true
   Width: 1267
   X: 242
-  Y: 116
+  Y: 86

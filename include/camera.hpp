@@ -17,6 +17,9 @@
 namespace camera
 {
 
+#define INIT_CAMERA_CLASS          \
+int camera::OneCam::cam_num = 0;   \
+
 using namespace gazebo;
 using IV3i = ignition::math::Vector3i;
 using IV3d = ignition::math::Vector3d;
@@ -26,8 +29,8 @@ using IP6d = ignition::math::Pose3d;
 class OneCam
 {
 public:
+    static int cam_num;
     OneCam(const rendering::ScenePtr& sc_, YAML::Node& yml) : scene(sc_) {
-        static int cam_num = 0;
         cam_name = std::string("cam") + std::to_string(cam_num);
 
         float hfov = IGN_DTOR(yml["hfov"].as<float>());
@@ -46,7 +49,8 @@ public:
             << "        <type>gaussian</type>"
             << "        <mean>" << noise[0] << "</mean>"
             << "        <stddev>" << noise[1] << "</stddev>"
-            << "      </noise>";
+            << "      </noise>"
+            << "</sdf>";
 
         sdf::ElementPtr cameraSDF(new sdf::Element);
         sdf::initFile("camera.sdf", cameraSDF);
@@ -56,12 +60,17 @@ public:
         cam->Load(cameraSDF);
         cam->Init();
         cam->SetCaptureData(true);
-        cam->CreateRenderTexture("CamTex" + std::to_string(cam_num++));
-    
+        cam->CreateRenderTexture("CamTex" + std::to_string(cam_num));
+        
+        gzmsg << "camera P: \n"
+            << cam->OgreCamera()->getProjectionMatrix() << std::endl;
+
         vec_t<float> tbc_vec = yml["ext"].as<vec_t<float>>();
         IV3d pos(tbc_vec[4], tbc_vec[5], tbc_vec[6]);
         IQd rot(tbc_vec[3], tbc_vec[0], tbc_vec[1], tbc_vec[2]);
         Tbc = IP6d(pos, rot);
+
+        cam_num++;
     }
 
     IP6d GetTbc() const {   return Tbc;     }
