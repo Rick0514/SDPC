@@ -5,7 +5,7 @@
     <!-- 启动 gazebo -->
     <!-- <arg name="world_name" default="onemodel" /> -->
     <!-- <arg name="world_name" default="pinetree" /> -->
-    <arg name="world_name" default="trees" />
+    <arg name="world_name" default="notree" />
     <!-- <arg name="world_name" default="shape" /> -->
     <!-- <arg name="world_name" default="room.world" /> -->
     <include file="$(find gazebo_ros)/launch/empty_world.launch">

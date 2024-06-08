@@ -36,6 +36,7 @@ public:
         float hfov = IGN_DTOR(yml["hfov"].as<float>());
         auto hw = yml["hw"].as<vec_t<int>>();
         auto noise = yml["noise"].as<vec_t<float>>();
+        auto ins = yml["intrinsics"].as<vec_t<float>>();
 
         std::ostringstream newModelStr;
         newModelStr << "<sdf version='" << SDF_VERSION << "'>"
@@ -45,11 +46,24 @@ public:
             << "        <height>" << hw[0] << "</height>"
             << "        <format>R8G8B8</format>"
             << "      </image>"
+            << "      <clip>"
+            << "        <near>0.1</near>"
+            << "        <far>100</far>"
+            << "      </clip>"
             << "      <noise>"
             << "        <type>gaussian</type>"
             << "        <mean>" << noise[0] << "</mean>"
             << "        <stddev>" << noise[1] << "</stddev>"
             << "      </noise>"
+            << "      <lens>"
+            << "        <intrinsics>"
+            << "            <fx>" << ins[0] << "</fx>"
+            << "            <fy>" << ins[1] << "</fy>"
+            << "            <cx>" << ins[2] << "</cx>"
+            << "            <cy>" << ins[3] << "</cy>"
+            << "            <s>0</s>"
+            << "        </intrinsics>"
+            << "      </lens>"
             << "</sdf>";
 
         sdf::ElementPtr cameraSDF(new sdf::Element);
@@ -61,9 +75,6 @@ public:
         cam->Init();
         cam->SetCaptureData(true);
         cam->CreateRenderTexture("CamTex" + std::to_string(cam_num));
-        
-        gzmsg << "camera P: \n"
-            << cam->OgreCamera()->getProjectionMatrix() << std::endl;
 
         vec_t<float> tbc_vec = yml["ext"].as<vec_t<float>>();
         IV3d pos(tbc_vec[4], tbc_vec[5], tbc_vec[6]);

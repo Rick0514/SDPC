@@ -1,7 +1,11 @@
-hz: 10
+hz: 30
+
+# fx = (w/2) * tan(hfov/2)
 
 cam0:
     ext: [0,0,0,1,0,0,0]    # to base, xyzw-xyz
     hfov: 80                # deg
     hw: [480, 640]          # height and width
+    intrinsics: [400,400,320,240]   # fx, fy, cx, cy
+
     noise: [0.0, 0.0001]    # mean and std

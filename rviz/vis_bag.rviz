@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /TF1
         - /TF1/Frames1
       Splitter Ratio: 0.45861297845840454
     Tree Height: 549
@@ -61,7 +62,7 @@ Visualization Manager:
         avia1:
           Value: false
         base_link:
-          Value: true
+          Value: false
         gt_base_link:
           Value: true
         map:
@@ -275,4 +276,4 @@ Window Geometry:
     collapsed: true
   Width: 1267
   X: 242
-  Y: 86
+  Y: 56

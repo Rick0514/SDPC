@@ -1,0 +1,8 @@
+# time, x(m), y(m), z(m), roll(deg), pitch(deg), yaw(deg)
+# at least 2 lines, the second line is still time
+0,     -6,   6,   1,   0, 0, 0
+4,     -6,   6,   1,   0, 0, 0
+14,     6,   6,   1,   0, 0, 0
+24,     6,  -6,   1,   0, 0, -90
+34,    -6,  -6,   1,   0, 0, -180   
+44,    -6,   6,   1,   0, 0, -270

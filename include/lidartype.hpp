@@ -371,7 +371,9 @@ public:
                 cp.reflectivity = 100;
                 cp.tag = 0x10;
                 cp.line = p.ring[0];
-                cp.offset_time = p.timestamp * 1e9 - msg.timebase;
+                // cp.offset_time = p.timestamp * 1e9 - msg.timebase;
+                // for no distort!!!
+                cp.offset_time = 0;
 
                 msg.points.push_back(cp);
             }
